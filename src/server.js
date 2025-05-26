@@ -7,11 +7,21 @@ const swaggerDocument = require('../config/swagger');
 const authRoutes = require('./routes/authRoutes.js');
 const path = require('path');
 const firebaseCfg   = require('./config/firebaseClient');  // <-- aqui
+const connectMongoDB = require('./config/mongodb');
+const mensagemHtmlRoute = require('./routes/mensagemHtmlRoute');
+const mensagemRoutes = require('./routes/mensagemRoutes');
 
 
 const prisma = new PrismaClient();
-
 const app = express();
+connectMongoDB().then(() => {
+  console.log('MongoDB conectado');
+
+  // seu app.listen aqui
+  app.listen(3000, () => {
+    console.log('Servidor rodando na porta 3000');
+  });
+});
 
 // 1. Forçar JSON em todas as requisições
 app.use(express.json());
@@ -43,6 +53,12 @@ app.get('/login', (req, res) => {
 
 ///////////////////////////////////////////////////////////////////
 
+
+// 🔁 Rota da API de mensagens
+app.use('/api/mensagens', mensagemRoutes);
+
+// ✅ Rota do HTML de teste
+app.use('/mensagens', mensagemHtmlRoute);
 
 // 2. Swagger JSON & UI
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));

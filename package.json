@@ -6,11 +6,10 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js"
-    
   },
   "prisma": {
-  "seed": "node prisma/seed.js"
-},
+    "seed": "node prisma/seed.js"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -21,11 +20,11 @@
     "express": "^5.1.0",
     "firebase": "^11.8.1",
     "firebase-admin": "^13.4.0",
+    "mongoose": "^8.15.0",
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
     "nodemon": "^3.0.0",
     "prisma": "^6.8.2"
   }
- 
 }

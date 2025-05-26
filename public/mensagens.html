@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Mensagens - AtléticaHub</title>
+</head>
+<body>
+  <h2>Mensagens Privadas</h2>
+
+  <p id="userInfo"></p>
+  <button id="logoutBtn">Sair</button>
+
+  <h3>Enviar Mensagem</h3>
+  <input type="text" id="receiverId" placeholder="UID do destinatário" />
+  <input type="text" id="conteudo" placeholder="Conteúdo da mensagem" />
+  <button onclick="enviarMensagem()">Enviar</button>
+
+  <h3>Conversas</h3>
+  <button onclick="carregarMensagens()">Ver mensagens</button>
+  <div id="conversas"></div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+
+  <script>
+    let token = '';
+    let currentUid = '';
+
+    async function init() {
+      // Carrega config do backend
+      const resp = await fetch('/config/firebase');
+      const cfg = await resp.json();
+      firebase.initializeApp(cfg);
+      const auth = firebase.auth();
+
+      auth.onAuthStateChanged(async (user) => {
+        if (!user) {
+          alert('Você precisa estar logado.');
+          return window.location.href = '/login.html';
+        }
+
+        token = await user.getIdToken();
+        currentUid = user.uid;
+
+        document.getElementById('userInfo').textContent = 'Logado como: ' + user.email;
+      });
+
+      // Logout
+      document.getElementById('logoutBtn').addEventListener('click', async () => {
+        await firebase.auth().signOut();
+        alert('Você saiu!');
+        window.location.href = '/login.html';
+      });
+    }
+
+    async function enviarMensagem() {
+      const receiverId = document.getElementById('receiverId').value;
+      const conteudo = document.getElementById('conteudo').value;
+
+      const res = await fetch('/api/mensagens', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + token,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ receiverId, conteudo })
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        alert('✅ Mensagem enviada!');
+      } else {
+        console.error(data);
+        alert('Erro ao enviar mensagem');
+      }
+    }
+
+    async function carregarMensagens() {
+      const receiverId = document.getElementById('receiverId').value;
+
+      const res = await fetch(`/api/mensagens/${receiverId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': 'Bearer ' + token
+        }
+      });
+
+      const data = await res.json();
+      const container = document.getElementById('conversas');
+
+      if (Array.isArray(data)) {
+        container.innerHTML = '<ul>' + data.map(m => `
+          <li><strong>${m.senderId === currentUid ? 'Você' : 'Outro'}:</strong> ${m.conteudo}</li>
+        `).join('') + '</ul>';
+      } else {
+        container.innerHTML = `<p>❌ Erro ao carregar mensagens.</p>`;
+        console.error(data);
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
