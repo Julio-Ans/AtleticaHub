@@ -1,0 +1,51 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Produto {
+  id        Int     @id @default(autoincrement())
+  nome      String
+  descricao String?
+  preco     Float
+  estoque   Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  cartItems   CartItem[]
+}
+
+model CartItem {
+  id           Int       @id @default(autoincrement())
+  studentEmail String
+  produto      Produto   @relation(fields: [produtoId], references: [id])
+  produtoId    Int
+  quantidade   Int
+  createdAt    DateTime  @default(now())
+}
+
+model Pedido {
+  id           Int       @id @default(autoincrement())
+  studentEmail String
+  // Armazena os produtos e quantidades no pedido (por exemplo, [{"produtoId": 1, "quantidade": 2}, ...])
+  produtos     Json
+  total        Float
+  status       String    @default("pendente") // pendente, pago, enviado, cancelado
+  createdAt    DateTime  @default(now())
+}
+
+model EmailDomain {
+  id      Int    @id @default(autoincrement())
+  domain  String @unique
+}
+
+model InviteCode {
+  id     Int     @id @default(autoincrement())
+  code   String  @unique
+  role   String
+  used   Boolean @default(false)
+}
+
