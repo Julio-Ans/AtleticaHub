@@ -1,19 +1,23 @@
-const admin = require('../config/firebaseAdmin');
+const admin = require('../config/firebaseAdmin'); 
 
-module.exports = async function verificarToken(req, res, next) {
+// Verifica token e adiciona req.user
+async function verificarToken(req, res, next) {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Token ausente' });
+    return res.status(401).json({ error: 'Token ausente ou inválido' });
   }
 
-  const token = authHeader.split(' ')[1];
+  const token = authHeader.split(' ')[1]; // Extrai o token do cabeçalho
 
   try {
-    const decoded = await admin.auth().verifyIdToken(token);
-    req.user = decoded; // UID e email disponíveis
-    next();
-  } catch (error) {
+    const decodedToken = await admin.auth().verifyIdToken(token); // Verifica o token com Firebase Admin
+    req.user = decodedToken; // Adiciona o usuário autenticado em req.user
+    next(); // Passa para a próxima função/middleware
+  } catch (err) {
+    console.error('Erro ao verificar token:', err);
     return res.status(401).json({ error: 'Token inválido' });
   }
-};
+}
+
+module.exports = verificarToken;

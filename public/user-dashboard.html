@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard - Usuário</title>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-auth-compat.js"></script>
+</head>
+<body>
+  <h1>Dashboard Usuário - AtléticaHub</h1>
+  <h2>Bem-vindo, Usuário!</h2>
+  <p>Aqui você pode acessar suas atividades, eventos e mais.</p>
+
+  <button onclick="logout()">Sair</button>
+
+  <script>
+    async function bootstrap() {
+      // 1. Busca configuração Firebase do servidor
+      const resp = await fetch('/config/firebase');
+      const cfg = await resp.json();
+      firebase.initializeApp(cfg);
+      const auth = firebase.auth();
+
+      // 2. Espera o estado de autenticação
+      auth.onAuthStateChanged(async (user) => {
+        if (!user) return window.location.href = '/login';
+
+        try {
+          // 3. Pega o token do usuário logado
+          const idToken = await user.getIdToken(true);
+
+          // 4. Chama backend para verificar permissão
+          const verifyRes = await fetch('/auth/verify-user', {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${idToken}`
+            }
+          });
+
+          if (!verifyRes.ok) throw new Error('Acesso negado');
+          // Usuário verificado com sucesso, segue na página
+        } catch (err) {
+          alert('Você não tem permissão para acessar esta página.');
+          await auth.signOut();
+          window.location.href = '/login';
+        }
+      });
+    }
+
+    function logout() {
+      firebase.auth().signOut().then(() => {
+        window.location.href = '/login';
+      });
+    }
+
+    bootstrap();
+  </script>
+</body>
+</html>

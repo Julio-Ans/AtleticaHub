@@ -9,5 +9,7 @@ router.post('/', verificarToken, mensagemController.enviarMensagem);
 // Buscar mensagens entre o usuário logado e outro
 router.get('/:receiverId', verificarToken, mensagemController.listarMensagens);
 
+router.get('/nao-lidas', verificarToken, mensagemController.listarNaoLidas);
+
 
 module.exports = router;

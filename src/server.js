@@ -6,10 +6,15 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerDocument = require('../config/swagger');
 const authRoutes = require('./routes/authRoutes.js');
 const path = require('path');
-const firebaseCfg   = require('./config/firebaseClient');  // <-- aqui
+const firebaseCfg   = require('./config/firebaseClient'); 
 const connectMongoDB = require('./config/mongodb');
 const mensagemHtmlRoute = require('./routes/mensagemHtmlRoute');
 const mensagemRoutes = require('./routes/mensagemRoutes');
+const checkRole = require('./middlewares/checkRole');  
+const verificarToken = require('./middlewares/verificarToken');  
+const protectedRoutes = require('./routes/protectedRoutes');
+
+
 
 
 const prisma = new PrismaClient();
@@ -37,10 +42,11 @@ app.get('/config/firebase', (req, res) => {
 });
 
 app.use('/auth', authRoutes); // agora você tem /auth/register e /auth/login
-
+app.use('/auth', protectedRoutes); 
 
 // TESTE HTML - Servir arquivos estáticos (como HTML, CSS, JS)
 app.use(express.static(path.join(__dirname, '../public')));
+
 // (Opcional) Redirecionar rota base para register.html
 app.get('/register', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/register.html'));
@@ -49,6 +55,18 @@ app.get('/register', (req, res) => {
 app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/login.html'));
 });
+
+// Rota para o dashboard de admin (apenas admin pode acessar)
+app.get('/admin-dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public', 'admin-dashboard.html'));
+});
+
+// Rota para o dashboard de usuário (apenas usuário pode acessar)
+app.get('/user-dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public', 'user-dashboard.html'));
+});
+
+
 
 
 ///////////////////////////////////////////////////////////////////

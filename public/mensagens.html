@@ -10,30 +10,44 @@
   <p id="userInfo"></p>
   <button id="logoutBtn">Sair</button>
 
-  <h3>Enviar Mensagem</h3>
+  <hr/>
+
+  <h3>Enviar Nova Mensagem</h3>
   <input type="text" id="receiverId" placeholder="UID do destinatário" />
   <input type="text" id="conteudo" placeholder="Conteúdo da mensagem" />
-  <button onclick="enviarMensagem()">Enviar</button>
+  <button id="enviarBtn">Enviar</button>
 
-  <h3>Conversas</h3>
-  <button onclick="carregarMensagens()">Ver mensagens</button>
-  <div id="conversas"></div>
+  <hr/>
+
+  <h3>Mensagens Enviadas</h3>
+  <button id="btnVerEnviadas">Ver mensagens enviadas</button>
+  <div id="mensagensEnviadas"></div>
+
+  <hr/>
+
+  <h3>Mensagens Recebidas (Não Lidas)</h3>
+  <button id="btnVerNaoLidas">Ver mensagens não lidas</button>
+  <div id="mensagensNaoLidas"></div>
+
+  <div id="notificacoes" style="margin-top: 20px;"></div>
 
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
   <script>
     let token = '';
     let currentUid = '';
+    let db;
 
     async function init() {
-      // Carrega config do backend
       const resp = await fetch('/config/firebase');
-      const cfg = await resp.json();
-      firebase.initializeApp(cfg);
-      const auth = firebase.auth();
+      const config = await resp.json();
+      firebase.initializeApp(config);
+      db = firebase.database();
 
+      const auth = firebase.auth();
       auth.onAuthStateChanged(async (user) => {
         if (!user) {
           alert('Você precisa estar logado.');
@@ -42,15 +56,20 @@
 
         token = await user.getIdToken();
         currentUid = user.uid;
-
         document.getElementById('userInfo').textContent = 'Logado como: ' + user.email;
-      });
 
-      // Logout
-      document.getElementById('logoutBtn').addEventListener('click', async () => {
-        await firebase.auth().signOut();
-        alert('Você saiu!');
-        window.location.href = '/login.html';
+        document.getElementById('logoutBtn').onclick = async () => {
+          await auth.signOut();
+          alert('Logout realizado!');
+          window.location.href = '/login.html';
+        };
+
+        // Botões dentro do init para garantir que existam
+        document.getElementById('enviarBtn').onclick = enviarMensagem;
+        document.getElementById('btnVerEnviadas').onclick = carregarMensagens;
+        document.getElementById('btnVerNaoLidas').onclick = carregarNaoLidas;
+
+        escutarMensagensEmTempoReal(currentUid);
       });
     }
 
@@ -71,8 +90,8 @@
       if (res.ok) {
         alert('✅ Mensagem enviada!');
       } else {
-        console.error(data);
         alert('Erro ao enviar mensagem');
+        console.error(data);
       }
     }
 
@@ -87,16 +106,67 @@
       });
 
       const data = await res.json();
-      const container = document.getElementById('conversas');
+      const container = document.getElementById('mensagensEnviadas');
 
       if (Array.isArray(data)) {
-        container.innerHTML = '<ul>' + data.map(m => `
-          <li><strong>${m.senderId === currentUid ? 'Você' : 'Outro'}:</strong> ${m.conteudo}</li>
-        `).join('') + '</ul>';
+        container.innerHTML = '<ul>' + data
+          .filter(m => m.senderId === currentUid)
+          .map(m => `
+            <li>
+              <strong>Para (ID):</strong> ${m.receiverId}<br/>
+              <strong>Conteúdo:</strong> ${m.conteudo}<br/>
+              <strong>Data:</strong> ${new Date(m.dataEnvio).toLocaleString()}
+            </li>
+          `).join('') + '</ul>';
       } else {
-        container.innerHTML = `<p>❌ Erro ao carregar mensagens.</p>`;
+        container.innerHTML = `<p>❌ Erro ao carregar mensagens enviadas.</p>`;
         console.error(data);
       }
+    }
+
+    async function carregarNaoLidas() {
+      const res = await fetch('/api/mensagens/nao-lidas', {
+        method: 'GET',
+        headers: {
+          'Authorization': 'Bearer ' + token
+        }
+      });
+
+      const data = await res.json();
+      const container = document.getElementById('mensagensNaoLidas');
+
+      if (Array.isArray(data) && data.length > 0) {
+        container.innerHTML = '<ul>' + data.map(m => `
+          <li>
+            <strong>De (ID):</strong> ${m.senderId}<br/>
+            <strong>Conteúdo:</strong> ${m.conteudo}<br/>
+            <strong>Data:</strong> ${new Date(m.dataEnvio).toLocaleString()}
+          </li>
+        `).join('') + '</ul>';
+      } else {
+        container.innerHTML = `<p>✅ Nenhuma mensagem não lida.</p>`;
+      }
+    }
+
+    function escutarMensagensEmTempoReal(uid) {
+      const mensagensRef = db.ref('mensagens/' + uid);
+      mensagensRef.on('child_added', (snap) => {
+        const m = snap.val();
+        const container = document.getElementById('notificacoes');
+
+        const alerta = document.createElement('div');
+        alerta.style.border = '1px solid green';
+        alerta.style.background = '#e1ffe1';
+        alerta.style.marginTop = '10px';
+        alerta.style.padding = '10px';
+        alerta.innerHTML = `
+          <strong>📨 Nova mensagem recebida!</strong><br/>
+          <b>De:</b> ${m.senderId}<br/>
+          <b>Conteúdo:</b> ${m.conteudo}
+        `;
+
+        container.appendChild(alerta);
+      });
     }
 
     init();

@@ -40,7 +40,21 @@ const listarMensagens = async (req, res) => {
   }
 };
 
+const listarNaoLidas = async (req, res) => {
+  const userId = req.user.uid;
+
+  try {
+    const mensagens = await mensagemService.buscarNaoLidas(userId);
+    res.json(mensagens);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar mensagens não lidas', details: err.message });
+  }
+};
+
+
 module.exports = {
   enviarMensagem,
-  listarMensagens
+  listarMensagens,
+  listarNaoLidas
+
 };

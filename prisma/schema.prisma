@@ -49,3 +49,19 @@ model InviteCode {
   used   Boolean @default(false)
 }
 
+model Esporte {
+  id        Int      @id @default(autoincrement())
+  codigo    String   @unique
+  nome      String
+  createdAt DateTime @default(now())
+}
+
+model Usuario {
+  id             String   @id               // UID do Firebase
+  nome           String
+  dataNascimento DateTime
+  telefone       String
+  curso          String
+  role           String @default("user")   // Adicionando o campo `role` para definir o tipo de usuário
+  createdAt      DateTime @default(now())
+}

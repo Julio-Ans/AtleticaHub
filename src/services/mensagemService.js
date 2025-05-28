@@ -1,20 +1,22 @@
 const Mensagem = require('../models/Mensagem');
+const admin = require('../config/firebaseAdmin');
+
 
 const criarMensagem = async (senderId, receiverId, conteudo) => {
-  try {
-    const nova = await Mensagem.create({
-      senderId,
-      receiverId,
-      conteudo,
-      lida: false,
-      dataEnvio: new Date()
-    });
-    console.log('✅ Mensagem salva no MongoDB:', nova);
-    return nova;
-  } catch (err) {
-    console.error('❌ Erro ao salvar mensagem:', err);
-    throw err;
-  }
+  const nova = await Mensagem.create({ senderId, receiverId, conteudo });
+  // 🔄 Envia para o Firebase Realtime DB
+  const db = admin.database();
+  const ref = db.ref(`mensagens/${receiverId}`);
+  const novaRef = ref.push();
+
+  await novaRef.set({
+    senderId,
+    conteudo,
+    timestamp: Date.now(),
+    lida: false
+  });
+
+  return nova;
 };
 
 const listarConversas = async (user1, user2) => {
@@ -32,7 +34,16 @@ const listarConversas = async (user1, user2) => {
   }
 };
 
+const buscarNaoLidas = async (receiverId) => {
+  return await Mensagem.find({
+    receiverId,
+    lida: false
+  }).sort({ dataEnvio: -1 });
+};
+
+
 module.exports = {
   criarMensagem,
-  listarConversas
+  listarConversas,
+  buscarNaoLidas
 };
