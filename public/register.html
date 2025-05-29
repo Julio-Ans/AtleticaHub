@@ -1,100 +1,411 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">  
+  <meta name="viewport" content="width=device-width, initial-scale=1">  
   <title>Cadastro - AtléticaHub</title>
-
-  <!-- Firebase compat SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-auth-compat.js"></script>
+  <style>
+    :root {
+      --primary-color: #007bff;
+      --secondary-color: #6c757d;
+      --success-color: #28a745;
+      --danger-color: #dc3545;
+      --light-color: #f8f9fa;
+      --dark-color: #343a40;
+      --border-color: #dee2e6;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background-color: #f5f5f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .register-container {
+      width: 100%;
+      max-width: 500px;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+    }
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: var(--primary-color);
+    }
+    
+    .form-group {
+      margin-bottom: 15px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+    }
+    
+    input, select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      font-size: 16px;
+    }
+    
+    button {
+      width: 100%;
+      padding: 12px;
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      margin-top: 10px;
+    }
+    
+    button:hover {
+      background-color: #0069d9;
+    }
+    
+    button:disabled {
+      background-color: var(--secondary-color);
+      cursor: not-allowed;
+    }
+    
+    .alert {
+      padding: 10px 15px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    
+    .alert-danger {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    
+    .alert-success {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    
+    .links {
+      margin-top: 20px;
+      text-align: center;
+    }
+    
+    .links a {
+      color: var(--primary-color);
+      text-decoration: none;
+    }
+    
+    .links a:hover {
+      text-decoration: underline;
+    }
+    
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+      margin-right: 10px;
+      display: none;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .two-columns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+    
+    @media (max-width: 576px) {
+      .two-columns {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .info-text {
+      font-size: 12px;
+      color: var(--secondary-color);
+      margin-top: 4px;
+    }
+    
+    .error-field {
+      border: 1px solid var(--danger-color);
+      background-color: #fff8f8;
+    }
+  </style>
 </head>
 <body>
-  <h1>Cadastro</h1>
-  
-  <form id="registerForm">
-    <label>Email:<br>
-      <input type="email" id="email" required />
-    </label><br><br>
-
-    <label>Senha:<br>
-      <input type="password" id="password" required />
-    </label><br><br>
-
-    <label>Nome completo:<br>
-      <input type="text" id="nome" required />
-    </label><br><br>
-
-    <label>Data de nascimento:<br>
-      <input type="date" id="dataNascimento" required />
-    </label><br><br>
-
-    <label>Telefone:<br>
-      <input type="text" id="telefone" required />
-    </label><br><br>
-
-    <label>Curso:<br>
-      <input type="text" id="curso" required />
-    </label><br><br>
-
-    <label>Código de convite (opcional):<br>
-      <input type="text" id="codigo" />
-    </label><br><br>
-
-    <button type="submit">Cadastrar</button>
-  </form>
-
-  <pre id="resposta"></pre>
+  <div class="register-container">
+    <h1>AtléticaHub</h1>
+    <h2 style="text-align: center; margin-bottom: 20px; color: var(--secondary-color);">Cadastro</h2>
+    
+    <div id="successAlert" class="alert alert-success"></div>
+    <div id="errorAlert" class="alert alert-danger"></div>
+    
+    <form id="registerForm">
+      <!-- Informações básicas -->
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" required autocomplete="email">
+        <p class="info-text">É necessário usar um email institucional autorizado para cadastro</p>
+      </div>
+      
+      <div class="form-group">
+        <label for="password">Senha (mínimo 6 caracteres)</label>
+        <input type="password" id="password" required autocomplete="new-password" minlength="6">
+      </div>
+      
+      <div class="form-group">
+        <label for="nome">Nome completo</label>
+        <input type="text" id="nome" required autocomplete="name">
+      </div>
+      
+      <div class="two-columns">
+        <div class="form-group">
+          <label for="dataNascimento">Data de nascimento</label>
+          <input type="date" id="dataNascimento" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="telefone">Telefone</label>
+          <input type="tel" id="telefone" placeholder="(00) 00000-0000" required>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="curso">Curso</label>
+        <input type="text" id="curso" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="codigo">Código de convite (opcional)</label>
+        <input type="text" id="codigo" placeholder="Para acesso administrativo">
+        <p class="info-text">Se você possuir um código válido e usar um email institucional, poderá receber acesso administrativo</p>
+      </div>
+      
+      <button type="submit"><span id="spinner" class="spinner"></span>Cadastrar</button>
+    </form>
+    
+    <div class="links">
+      <p>Já tem uma conta? <a href="/login">Faça login</a></p>
+    </div>
+  </div>
 
   <script>
-    async function main() {
-      const resp = await fetch('/config/firebase');
-      const cfg = await resp.json();
-      firebase.initializeApp(cfg);
-      const auth = firebase.auth();
+    async function bootstrap() {
+      try {
+        // Carregar configuração do Firebase
+        const resp = await fetch('/config/firebase');
+        const cfg = await resp.json();
+        firebase.initializeApp(cfg);
+        
+        const auth = firebase.auth();
+        const form = document.getElementById('registerForm');
+        const errorAlert = document.getElementById('errorAlert');
+        const successAlert = document.getElementById('successAlert');
+        const spinner = document.getElementById('spinner');
+        
+        // Verificar se o usuário já está logado
+        firebase.auth().onAuthStateChanged(user => {
+          if (user) {
+            redirectUserBasedOnRole();
+          }
+        });
 
-      document.getElementById('registerForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-        const nome = document.getElementById('nome').value;
-        const dataNascimento = document.getElementById('dataNascimento').value;
-        const telefone = document.getElementById('telefone').value;
-        const curso = document.getElementById('curso').value;
-        const codigo = document.getElementById('codigo').value;
-
-        try {
-          // Registrar no Firebase
-          const cred = await auth.createUserWithEmailAndPassword(email, password);
-          const uid = cred.user.uid;
-
-          // Enviar dados para o backend (salvar no PostgreSQL)
-          const res = await fetch('/auth/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ uid, email, nome, telefone, curso, dataNascimento, codigo, password })
-          });
-
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error);
-          
-          // Sucesso no cadastro
-          document.getElementById('resposta').textContent = '✅ Cadastro concluído!';
-          // Sucesso no cadastro
-if (data.role === 'admin') {
-  window.location.href = '/admin-dashboard';
-} else {
-  window.location.href = '/user-dashboard';
-}
-
-        } catch (err) {
-          document.getElementById('resposta').textContent = '❌ ' + err.message;
+        // Função para redirecionar com base no papel do usuário
+        async function redirectUserBasedOnRole() {
+          try {
+            const token = await firebase.auth().currentUser.getIdToken();
+            const res = await fetch('/auth/verify-user', {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            
+            if (res.ok) {
+              const data = await res.json();
+              if (data.user.role === 'admin') {
+                window.location.href = '/admin-dashboard';
+              } else {
+                window.location.href = '/user-dashboard';
+              }
+            }
+          } catch (err) {
+            console.error('Erro ao verificar papel do usuário:', err);
+          }
         }
-      });
-    }
 
-    main();
+        // Função para exibir erros
+        function showError(message) {
+          errorAlert.textContent = message;
+          errorAlert.style.display = 'block';
+          successAlert.style.display = 'none';
+          spinner.style.display = 'none';
+          form.querySelector('button').disabled = false;
+          
+          // Destacar campos relevantes com base no erro
+          if (message.includes('domínio autorizado') || message.includes('código de convite')) {
+            document.getElementById('email').classList.add('error-field');
+            document.getElementById('codigo').classList.add('error-field');
+          } else if (message.includes('senha')) {
+            document.getElementById('password').classList.add('error-field');
+          }
+        }
+        
+        // Função para exibir sucesso
+        function showSuccess(message) {
+          successAlert.textContent = message;
+          successAlert.style.display = 'block';
+          errorAlert.style.display = 'none';
+        }
+
+        // Limpar estilos de erro ao focar nos campos
+        document.querySelectorAll('input').forEach(input => {
+          input.addEventListener('focus', () => {
+            input.classList.remove('error-field');
+          });
+        });
+
+        // Ouvinte do formulário
+        form.addEventListener('submit', async e => {
+          e.preventDefault();
+          errorAlert.style.display = 'none';
+          successAlert.style.display = 'none';
+          spinner.style.display = 'inline-block';
+          form.querySelector('button').disabled = true;
+          
+          try {
+            const email = form.email.value.trim();
+            const password = form.password.value;
+            const nome = form.nome.value.trim();
+            const dataNascimento = form.dataNascimento.value;
+            const telefone = form.telefone.value.trim();
+            const curso = form.curso.value.trim();
+            const codigo = form.codigo.value.trim();
+            
+            // Validações básicas
+            if (!email || !password || !nome || !dataNascimento || !telefone || !curso) {
+              return showError('Todos os campos são obrigatórios');
+            }
+            
+            if (password.length < 6) {
+              return showError('A senha deve ter pelo menos 6 caracteres');
+            }
+            
+            // Mostrar que estamos enviando os dados
+            console.log('Enviando dados para registro...');
+            
+            // Enviar dados para o backend
+            const response = await fetch('/auth/register', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                email,
+                password,
+                nome,
+                dataNascimento,
+                telefone,
+                curso,
+                codigo: codigo || undefined
+              })
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+              throw new Error(data.error || 'Erro no registro');
+            }
+            
+            showSuccess('Cadastro realizado com sucesso! Redirecionando...');
+            
+            // Login automático após cadastro bem-sucedido
+            try {
+              await firebase.auth().signInWithEmailAndPassword(email, password);
+              
+              // Redirecionar para o dashboard apropriado
+              setTimeout(() => {
+                if (data.user && data.user.role === 'admin') {
+                  window.location.href = '/admin-dashboard';
+                } else {
+                  window.location.href = '/user-dashboard';
+                }
+              }, 1500);
+            } catch (loginErr) {
+              console.error('Erro ao fazer login automático:', loginErr);
+              // Mesmo com erro no login, redireciona para a página de login
+              setTimeout(() => {
+                window.location.href = '/login';
+              }, 1500);
+            }
+          } catch (err) {
+            console.error('Erro no registro:', err);
+            showError(err.message);
+          }
+        });
+        
+        // Atualizar a mensagem informativa no campo de email e código
+        document.querySelector('#email + .info-text').textContent = 
+          "É necessário usar um email institucional autorizado para cadastro";
+        
+        document.querySelector('#codigo + .info-text').textContent = 
+          "Código opcional para acesso administrativo (apenas com email institucional)";
+        
+        // Atualizar o evento blur do email
+        document.getElementById('email').addEventListener('blur', async (e) => {
+          try {
+            const email = e.target.value.trim();
+            if (email && email.includes('@')) {
+              const codigoInfo = document.querySelector('#codigo + .info-text');
+              const dominio = email.split('@')[1];
+              
+              // Apenas sugestão visual baseada em domínios comuns
+              if (dominio.includes('fatec') || dominio.includes('edu') || dominio.includes('ac')) {
+                codigoInfo.textContent = "Código opcional para obter acesso administrativo.";
+              } else {
+                codigoInfo.textContent = "ATENÇÃO: Seu email não parece ser institucional. Apenas emails de domínios autorizados são aceitos.";
+                document.getElementById('email').classList.add('error-field');
+              }
+            }
+          } catch (err) {
+            console.error('Erro ao verificar email:', err);
+          }
+        });
+      } catch (err) {
+        console.error('Erro ao inicializar:', err);
+        document.body.innerHTML = '<div style="color: red; text-align: center; margin-top: 50px;">Erro ao carregar a página de cadastro. Por favor, tente novamente.</div>';
+      }
+    }
+    
+    bootstrap();
   </script>
 </body>
 </html>

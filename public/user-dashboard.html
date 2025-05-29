@@ -1,62 +1,687 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Dashboard - Usuário</title>
-
-  <!-- Firebase SDK -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AtléticaHub - Dashboard do Usuário</title>
   <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-auth-compat.js"></script>
+  <style>
+    :root {
+      --primary-color: #007bff;
+      --secondary-color: #6c757d;
+      --success-color: #28a745;
+      --danger-color: #dc3545;
+      --light-color: #f8f9fa;
+      --dark-color: #343a40;
+      --border-color: #dee2e6;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background-color: #f5f5f5;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+    }
+    
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 20px;
+    }
+    
+    h1, h2, h3 {
+      color: var(--dark-color);
+    }
+    
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .user-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background-color: var(--primary-color);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+    }
+    
+    .tabs {
+      display: flex;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      border-bottom: none;
+      border-radius: 4px 4px 0 0;
+      margin-right: 5px;
+      background-color: #f8f9fa;
+    }
+    
+    .tab.active {
+      background-color: white;
+      border-color: var(--border-color);
+      border-bottom-color: white;
+      margin-bottom: -1px;
+      color: var(--primary-color);
+      font-weight: bold;
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    .card {
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      padding: 15px;
+      margin-bottom: 15px;
+      background-color: white;
+    }
+    
+    .esporte-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    button {
+      padding: 8px 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background-color 0.2s;
+    }
+    
+    button.primary {
+      background-color: var(--primary-color);
+      color: white;
+    }
+    
+    button.primary:hover {
+      background-color: #0069d9;
+    }
+    
+    button.secondary {
+      background-color: var(--secondary-color);
+      color: white;
+    }
+    
+    button.secondary:hover {
+      background-color: #5a6268;
+    }
+    
+    button.success {
+      background-color: var(--success-color);
+      color: white;
+    }
+    
+    button.success:hover {
+      background-color: #218838;
+    }
+    
+    .status-badge {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    
+    .status-badge.pendente {
+      background-color: #ffc107;
+      color: #212529;
+    }
+    
+    .status-badge.aceito {
+      background-color: var(--success-color);
+      color: white;
+    }
+    
+    .status-badge.recusado {
+      background-color: var(--danger-color);
+      color: white;
+    }
+    
+    .message-card {
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      padding: 15px;
+      margin-bottom: 10px;
+    }
+    
+    .message-card.fixed {
+      background-color: var(--light-color);
+      border-left: 3px solid var(--primary-color);
+    }
+    
+    .message-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+    }
+    
+    .message-author {
+      font-weight: bold;
+    }
+    
+    .message-date {
+      color: var(--secondary-color);
+      font-size: 12px;
+    }
+    
+    .message-content {
+      margin-bottom: 5px;
+    }
+    
+    .message-footer {
+      font-size: 12px;
+      color: var(--secondary-color);
+    }
+    
+    textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      margin-bottom: 10px;
+      min-height: 80px;
+      resize: vertical;
+    }
+    
+    .alert {
+      padding: 10px 15px;
+      border-radius: 4px;
+      margin-bottom: 15px;
+    }
+    
+    .alert-success {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    
+    .alert-danger {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    
+    .alert-info {
+      background-color: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+    
+    .loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      color: var(--secondary-color);
+    }
+    
+    .esporte-selector {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      margin-bottom: 15px;
+    }
+    
+    @media (max-width: 768px) {
+      .tabs {
+        flex-direction: column;
+        border-bottom: none;
+      }
+      
+      .tab {
+        border-radius: 4px;
+        margin-bottom: 5px;
+        border: 1px solid var(--border-color);
+      }
+      
+      .tab.active {
+        margin-bottom: 5px;
+      }
+      
+      .esporte-card {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      
+      .esporte-card button {
+        margin-top: 10px;
+        width: 100%;
+      }
+    }
+  </style>
 </head>
 <body>
-  <h1>Dashboard Usuário - AtléticaHub</h1>
-  <h2>Bem-vindo, Usuário!</h2>
-  <p>Aqui você pode acessar suas atividades, eventos e mais.</p>
-
-  <button onclick="logout()">Sair</button>
+  <div class="container">
+    <header>
+      <h1>AtléticaHub</h1>
+      <div class="user-info">
+        <div class="user-avatar" id="userAvatar"></div>
+        <div id="userName">Carregando...</div>
+        <button class="secondary" onclick="logout()" style="margin-left: 15px;">Sair</button>
+      </div>
+    </header>
+    
+    <div class="tabs">
+      <div class="tab active" onclick="changeTab('esportes')">Meus Esportes</div>
+      <div class="tab" onclick="changeTab('mensagens')">Mensagens</div>
+      <div class="tab" onclick="changeTab('perfil')">Meu Perfil</div>
+    </div>
+    
+    <!-- Tab Esportes -->
+    <div id="esportesTab" class="tab-content active">
+      <h2>Esportes Disponíveis</h2>
+      <div id="esportesAlert"></div>
+      <div id="esportesContainer" class="loading">Carregando esportes...</div>
+      
+      <h3 style="margin-top: 30px;">Minhas Inscrições</h3>
+      <div id="minhasInscricoesAlert"></div>
+      <div id="minhasInscricoesContainer" class="loading">Carregando inscrições...</div>
+    </div>
+    
+    <!-- Tab Mensagens -->
+    <div id="mensagensTab" class="tab-content">
+      <h2>Mensagens</h2>
+      <select id="esporteMensagens" class="esporte-selector" onchange="carregarMensagens(this.value)">
+        <option value="0">Geral</option>
+        <!-- Outros esportes serão carregados dinamicamente -->
+      </select>
+      
+      <div id="mensagensAlert"></div>
+      <div id="mensagensContainer" class="loading">Carregando mensagens...</div>
+      
+      <div class="card">
+        <h3>Nova Mensagem</h3>
+        <textarea id="novaMensagem" placeholder="Digite sua mensagem aqui..."></textarea>
+        <button class="primary" onclick="enviarMensagem()">Enviar</button>
+      </div>
+    </div>
+    
+    <!-- Tab Perfil -->
+    <div id="perfilTab" class="tab-content">
+      <h2>Meu Perfil</h2>
+      <div class="card">
+        <div id="perfilDetalhes">Carregando informações do perfil...</div>
+        <button class="primary" onclick="logout()" style="margin-top: 20px;">Sair</button>
+      </div>
+    </div>
+  </div>
 
   <script>
-    async function bootstrap() {
-      // 1. Busca configuração Firebase do servidor
-      const resp = await fetch('/config/firebase');
-      const cfg = await resp.json();
-      firebase.initializeApp(cfg);
-      const auth = firebase.auth();
-
-      // 2. Espera o estado de autenticação
-      auth.onAuthStateChanged(async (user) => {
-        if (!user) return window.location.href = '/login';
-
-        try {
-          // 3. Pega o token do usuário logado
-          const idToken = await user.getIdToken(true);
-
-          // 4. Chama backend para verificar permissão
-          const verifyRes = await fetch('/auth/verify-user', {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${idToken}`
-            }
-          });
-
-          if (!verifyRes.ok) throw new Error('Acesso negado');
-          // Usuário verificado com sucesso, segue na página
-        } catch (err) {
-          alert('Você não tem permissão para acessar esta página.');
-          await auth.signOut();
-          window.location.href = '/login';
-        }
-      });
+    // Constantes
+    const esporteGeralId = "0"; // Usando string em vez de número
+    
+    // Variáveis globais
+    let firebaseUser;
+    let esportes = [];
+    let minhasInscricoes = [];
+    let currentTab = 'esportes';
+    
+    // Inicialização
+    async function main() {
+      try {
+        // Carregar configuração do Firebase
+        const resp = await fetch('/config/firebase');
+        const firebaseConfig = await resp.json();
+        
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        
+        // Verificar autenticação
+        firebase.auth().onAuthStateChanged(async user => {
+          if (!user) {
+            console.warn('Usuário não autenticado');
+            return window.location.href = '/login';
+          }
+          
+          firebaseUser = user;
+          await verificarAcesso();
+          
+          // Carregar dados iniciais
+          await Promise.all([
+            carregarEsportes(),
+            carregarMinhasInscricoes(),
+            carregarMensagens(esporteGeralId)
+          ]);
+          
+          // Exibir informações do usuário
+          exibirInfoUsuario();
+        });
+      } catch (err) {
+        console.error('Erro ao inicializar:', err);
+        showAlert('esportesAlert', 'Erro ao carregar a página. Por favor, tente novamente.', 'danger');
+      }
     }
-
+    
+    // Verificar acesso do usuário
+    async function verificarAcesso() {
+      try {
+        const token = await firebaseUser.getIdToken();
+        const res = await fetch('/auth/verify-user', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (!res.ok) {
+          return window.location.href = '/login';
+        }
+        
+        const data = await res.json();
+        console.log("Usuário autenticado com sucesso:", data);
+      } catch (err) {
+        console.error('Erro de verificação:', err);
+        alert('Erro ao verificar suas credenciais.');
+        window.location.href = '/login';
+      }
+    }
+    
+    // Exibir informações do usuário
+    function exibirInfoUsuario() {
+      // Garantir que sempre exista um nome
+      const nome = firebaseUser.displayName || firebaseUser.email?.split('@')[0] || "Usuário";
+      document.getElementById('userName').textContent = nome;
+      
+      // Avatar com iniciais
+      const iniciais = (nome?.slice(0, 2) || "U").toUpperCase();
+      document.getElementById('userAvatar').textContent = iniciais;
+      
+      // Perfil
+      const perfilHTML = `
+        <p><strong>Nome:</strong> ${firebaseUser.displayName || 'Não definido'}</p>
+        <p><strong>Email:</strong> ${firebaseUser.email}</p>
+        <p><strong>Conta criada em:</strong> ${new Date(firebaseUser.metadata.creationTime).toLocaleString()}</p>
+      `;
+      document.getElementById('perfilDetalhes').innerHTML = perfilHTML;
+    }
+    
+    // Mudar entre abas
+    function changeTab(tab) {
+      // Remover classe ativa de todas as abas
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      
+      // Adicionar classe ativa à aba selecionada
+      document.querySelector(`.tab[onclick="changeTab('${tab}')"]`).classList.add('active');
+      document.getElementById(`${tab}Tab`).classList.add('active');
+      
+      currentTab = tab;
+    }
+    
+    // Carregar esportes disponíveis
+    async function carregarEsportes() {
+      try {
+        const token = await firebaseUser.getIdToken();
+        const res = await fetch('/api/esportes', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (!res.ok) {
+          throw new Error('Falha ao carregar esportes');
+        }
+        
+        esportes = await res.json();
+        const container = document.getElementById('esportesContainer');
+        container.innerHTML = '';
+        container.classList.remove('loading');
+        
+        // Preencher selector de esportes para mensagens
+        const seletor = document.getElementById('esporteMensagens');
+        seletor.innerHTML = '<option value="0">Geral</option>';
+        
+        esportes.forEach(esporte => {
+          // Pular o esporte Geral na lista de inscrições
+          if (esporte.id === "0") return;
+          
+          // Adicionar ao seletor de mensagens
+          const option = document.createElement('option');
+          option.value = esporte.id;
+          option.textContent = esporte.nome;
+          seletor.appendChild(option);
+          
+          // Adicionar card do esporte
+          const div = document.createElement('div');
+          div.className = 'card esporte-card';
+          div.innerHTML = `
+            <div>
+              <h3>${esporte.nome}</h3>
+            </div>
+            <button class="primary" onclick="inscreverEsporte('${esporte.id}')">Inscrever-se</button>
+          `;
+          container.appendChild(div);
+        });
+        
+        if (container.children.length === 0) {
+          container.innerHTML = '<p>Não há esportes disponíveis no momento.</p>';
+        }
+      } catch (err) {
+        console.error('Erro ao carregar esportes:', err);
+        document.getElementById('esportesContainer').innerHTML = 
+          '<p>Não foi possível carregar os esportes. Por favor, tente novamente mais tarde.</p>';
+        showAlert('esportesAlert', 'Erro ao carregar esportes: ' + err.message, 'danger');
+      }
+    }
+    
+    // Inscrever-se em um esporte
+    async function inscreverEsporte(esporteId) {
+      try {
+        const token = await firebaseUser.getIdToken();
+        const res = await fetch(`/api/inscricoes/${esporteId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          }
+        });
+        
+        const data = await res.json();
+        
+        if (!res.ok) {
+          throw new Error(data.error || 'Falha ao se inscrever');
+        }
+        
+        showAlert('esportesAlert', 'Inscrição enviada com sucesso! Aguarde a aprovação.', 'success');
+        
+        // Atualizar a lista de inscrições
+        await carregarMinhasInscricoes();
+      } catch (err) {
+        console.error('Erro na inscrição:', err);
+        showAlert('esportesAlert', `Erro: ${err.message}`, 'danger');
+      }
+    }
+    
+    // Carregar minhas inscrições
+    async function carregarMinhasInscricoes() {
+      try {
+        const token = await firebaseUser.getIdToken();
+        // Assumindo que existe um endpoint para listar inscrições do usuário
+        const res = await fetch('/api/inscricoes/minhas', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (!res.ok) {
+          throw new Error('Falha ao carregar inscrições');
+        }
+        
+        minhasInscricoes = await res.json();
+        const container = document.getElementById('minhasInscricoesContainer');
+        container.innerHTML = '';
+        container.classList.remove('loading');
+        
+        minhasInscricoes.forEach(inscricao => {
+          const esporte = esportes.find(e => e.id === inscricao.esporteId) || { nome: 'Esporte não encontrado' };
+          
+          const div = document.createElement('div');
+          div.className = 'card';
+          
+          let statusBadge = '';
+          if (inscricao.status === 'pendente') {
+            statusBadge = '<span class="status-badge pendente">Pendente</span>';
+          } else if (inscricao.status === 'aceito') {
+            statusBadge = '<span class="status-badge aceito">Aceito</span>';
+          } else if (inscricao.status === 'recusado') {
+            statusBadge = '<span class="status-badge recusado">Recusado</span>';
+          }
+          
+          div.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <h3>${esporte.nome}</h3>
+              ${statusBadge}
+            </div>
+            <p>Data de inscrição: ${new Date(inscricao.criadaEm).toLocaleDateString()}</p>
+          `;
+          container.appendChild(div);
+        });
+        
+        if (container.children.length === 0) {
+          container.innerHTML = '<p>Você ainda não possui inscrições em esportes.</p>';
+        }
+      } catch (err) {
+        console.error('Erro ao carregar inscrições:', err);
+        document.getElementById('minhasInscricoesContainer').innerHTML = 
+          '<p>Não foi possível carregar suas inscrições. Por favor, tente novamente mais tarde.</p>';
+      }
+    }
+    
+    // Carregar mensagens de um esporte
+    async function carregarMensagens(esporteId) {
+      try {
+        const token = await firebaseUser.getIdToken();
+        const res = await fetch(`/api/mensagens/${esporteId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (!res.ok) {
+          throw new Error('Falha ao carregar mensagens');
+        }
+        
+        const mensagens = await res.json();
+        const container = document.getElementById('mensagensContainer');
+        container.innerHTML = '';
+        container.classList.remove('loading');
+        
+        mensagens.forEach(msg => {
+          const div = document.createElement('div');
+          div.className = msg.fixada ? 'message-card fixed' : 'message-card';
+          
+          div.innerHTML = `
+            <div class="message-header">
+              <span class="message-author">${msg.usuarioNome}</span>
+              <span class="message-date">${new Date(msg.criadaEm).toLocaleString()}</span>
+            </div>
+            <div class="message-content">${msg.conteudo}</div>
+            ${msg.fixada ? '<div class="message-footer"><i>Mensagem fixada</i></div>' : ''}
+          `;
+          
+          container.appendChild(div);
+        });
+        
+        if (container.children.length === 0) {
+          container.innerHTML = '<p>Não há mensagens neste grupo ainda.</p>';
+        }
+      } catch (err) {
+        console.error('Erro ao carregar mensagens:', err);
+        document.getElementById('mensagensContainer').innerHTML = 
+          '<p>Não foi possível carregar as mensagens. Por favor, tente novamente.</p>';
+        showAlert('mensagensAlert', 'Erro ao carregar mensagens: ' + err.message, 'danger');
+      }
+    }
+    
+    // Enviar mensagem
+    async function enviarMensagem() {
+      try {
+        const conteudo = document.getElementById('novaMensagem').value.trim();
+        
+        if (!conteudo) {
+          return showAlert('mensagensAlert', 'Por favor, digite uma mensagem para enviar.', 'info');
+        }
+        
+        const esporteId = document.getElementById('esporteMensagens').value;
+        
+        const token = await firebaseUser.getIdToken();
+        const res = await fetch(`/api/mensagens/${esporteId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ conteudo })
+        });
+        
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || 'Falha ao enviar mensagem');
+        }
+        
+        document.getElementById('novaMensagem').value = '';
+        showAlert('mensagensAlert', 'Mensagem enviada com sucesso!', 'success');
+        await carregarMensagens(esporteId);
+      } catch (err) {
+        console.error('Erro ao enviar mensagem:', err);
+        showAlert('mensagensAlert', `Erro ao enviar mensagem: ${err.message}`, 'danger');
+      }
+    }
+    
+    // Exibir alertas
+    function showAlert(containerId, message, type) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+      
+      // Auto-esconder após 5 segundos
+      setTimeout(() => {
+        container.innerHTML = '';
+      }, 5000);
+    }
+    
+    // Logout
     function logout() {
       firebase.auth().signOut().then(() => {
         window.location.href = '/login';
+      }).catch(err => {
+        console.error('Erro ao fazer logout:', err);
+        alert('Erro ao fazer logout. Por favor, tente novamente.');
       });
     }
-
-    bootstrap();
+    
+    // Iniciar a aplicação
+    main();
   </script>
 </body>
 </html>

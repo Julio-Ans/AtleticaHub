@@ -1,59 +1,813 @@
+<!-- admin-dashboard.html -->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Dashboard - Admin</title>
-
-  <!-- Firebase compat SDKs -->
+  <meta charset="UTF-8">
+  <title>Admin Dashboard</title>
   <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-auth-compat.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .card {
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 15px;
+      margin-bottom: 15px;
+    }
+    .message-card {
+      border: 1px solid #ddd;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+    }
+    .message-card.fixed {
+      background-color: #f8f9fa;
+      border-left: 3px solid #007bff;
+    }
+    button {
+      padding: 8px 12px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 5px;
+    }
+    button.reject {
+      background: #f44336;
+    }
+    button.fix {
+      background: #2196F3;
+    }
+    #esporteSelector {
+      padding: 8px;
+      margin-bottom: 15px;
+    }
+    #modalMensagens {
+      border: 1px solid #ddd;
+      padding: 20px;
+      margin-top: 20px;
+      border-radius: 5px;
+    }
+    #novaMensagem {
+      width: 100%;
+      min-height: 60px;
+      margin-bottom: 10px;
+    }
+    .tabs {
+      display: flex;
+      margin-bottom: 20px;
+    }
+    .tab {
+      padding: 10px 15px;
+      border: 1px solid #ddd;
+      background: #f5f5f5;
+      cursor: pointer;
+    }
+    .tab.active {
+      background: #007bff;
+      color: white;
+      border-color: #007bff;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    .form-control {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    .btn {
+      padding: 10px 15px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background: #007bff;
+    }
+    .btn-danger {
+      background: #f44336;
+    }
+    .mensagens-container {
+      max-height: 400px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      padding: 10px;
+      border-radius: 4px;
+      background: #f9f9f9;
+    }
+
+    .mensagem-container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .esporte-selector {
+      padding-bottom: 15px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .mensagens-lista {
+      flex: 1;
+    }
+
+    .mensagens-container {
+      max-height: 400px;
+      overflow-y: auto;
+      padding: 10px;
+      background: #f9f9f9;
+      border-radius: 5px;
+      border: 1px solid #ddd;
+    }
+
+    .mensagem {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      border-left: 3px solid #ddd;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .mensagem.fixada {
+      border-left: 3px solid #007bff;
+      background-color: #f8f9fa;
+    }
+
+    .mensagem-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .mensagem-conteudo {
+      margin-bottom: 15px;
+      white-space: pre-wrap;
+    }
+
+    .mensagem-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #666;
+      font-size: 0.9em;
+    }
+
+    .mensagem-acoes {
+      display: flex;
+      gap: 8px;
+    }
+
+    .nova-mensagem {
+      margin-top: 20px;
+      padding-top: 15px;
+      border-top: 1px solid #eee;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .btn-fixar {
+      background: #17a2b8;
+    }
+
+    .carregando {
+      text-align: center;
+      color: #666;
+      padding: 20px;
+    }
+  </style>
 </head>
 <body>
-  <h1>Dashboard Admin - AtléticaHub</h1>
-  <h2>Bem-vindo, Administrador!</h2>
-  <p>Aqui você pode gerenciar usuários, eventos, e mais.</p>
-
-  <button onclick="logout()">Sair</button>
+  <div class="container">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <h1>Dashboard do Administrador</h1>
+      <button class="reject" onclick="logout()">Sair</button>
+    </div>
+    
+    <div class="tabs">
+      <div class="tab active" onclick="changeTab('inscricoes')">Inscrições</div>
+      <div class="tab" onclick="changeTab('mensagens')">Mensagens</div>
+      <div class="tab" onclick="changeTab('esportes')">Gerenciar Esportes</div>
+    </div>
+    
+    <div id="inscricoesTab">
+      <!-- Seletor de esportes -->
+      <h2>Inscrições Pendentes</h2>
+      <select id="esporteSelector" onchange="carregarPendentes(this.value)">
+        <option value="">Selecione um esporte...</option>
+      </select>
+      <div id="listaInscricoes" class="card">
+        <p>Selecione um esporte para ver as inscrições pendentes.</p>
+      </div>
+    </div>
+    
+    <div id="mensagensTab" style="display:none">
+      <h2>Gerenciar Mensagens</h2>
+      
+      <div class="card mensagem-container">
+        <!-- Seletor de esporte -->
+        <div class="esporte-selector">
+          <label for="esporteMensagens">Selecione o Esporte:</label>
+          <select id="esporteMensagens" class="form-control" onchange="mudarEsporteMensagens(this.value)">
+            <option value="0">Geral (Todos os Esportes)</option>
+            <!-- Outros esportes serão carregados dinamicamente -->
+          </select>
+        </div>
+        
+        <!-- Lista de mensagens -->
+        <div class="mensagens-lista">
+          <h3>Mensagens <span id="esporteAtual">Gerais</span></h3>
+          <div id="listaMensagens" class="mensagens-container">
+            <p class="carregando">Carregando mensagens...</p>
+          </div>
+        </div>
+        
+        <!-- Campo para enviar nova mensagem -->
+        <div class="nova-mensagem">
+          <h3>Enviar Nova Mensagem</h3>
+          <textarea id="mensagemTexto" class="form-control" rows="3" placeholder="Digite sua mensagem aqui..."></textarea>
+          <button onclick="enviarMensagem()" class="btn btn-primary">Enviar Mensagem</button>
+        </div>
+      </div>
+    </div>
+    
+    <div id="esportesTab" style="display:none">
+      <h2>Gerenciar Esportes</h2>
+      <div class="card">
+        <h3>Adicionar Novo Esporte</h3>
+        <input type="text" id="novoEsporteNome" placeholder="Nome do esporte">
+        <button onclick="adicionarEsporte()">Adicionar</button>
+      </div>
+      <div id="listaEsportes">
+        <p>Carregando esportes...</p>
+      </div>
+    </div>
+  </div>
 
   <script>
-    async function bootstrap() {
-      const resp = await fetch('/config/firebase');
-      const cfg = await resp.json();
-      firebase.initializeApp(cfg);
-      const auth = firebase.auth();
+    const esporteGeralId = "0"; // Número em vez de string
+    let firebaseUser;
+    let currentTab = 'inscricoes';    async function main() {
+      try {
+        // Carregar configuração do Firebase do servidor
+        const resp = await fetch('/config/firebase');
+        const firebaseConfig = await resp.json();
+        firebase.initializeApp(firebaseConfig);
 
-      auth.onAuthStateChanged(async (user) => {
-        if (!user) return window.location.href = '/login';
+        // Configurar autenticação
+        firebase.auth().onAuthStateChanged(async user => {
+          if (!user) {
+            return window.location.href = '/login';
+          }
+          
+          firebaseUser = user;
+          const verificado = await verificarAcessoAdmin();
+          
+          if (verificado) {
+            await carregarEsportes();
+            await carregarEsportesParaMensagens();
+            await mudarEsporteMensagens("0");
+          }
+        });
+      } catch (err) {
+        console.error('Erro ao inicializar:', err);
+        alert('Erro ao carregar a página. Por favor, tente novamente.');
+      }
+    }
 
-        try {
-          const idToken = await user.getIdToken(true);
-          const res = await fetch('/auth/verify-admin', {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${idToken}`
-            }
-          });
-
-          if (!res.ok) throw new Error('Acesso negado');
-          // Acesso liberado — permanece no dashboard
-        } catch (err) {
+    async function verificarAcessoAdmin() {
+      try {
+        const token = await firebaseUser.getIdToken();
+        const res = await fetch('/auth/verify-admin', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (!res.ok) {
           alert('Você não tem permissão para acessar esta página.');
-          await auth.signOut();
-          window.location.href = '/login';
+          window.location.href = '/user-dashboard';
+          return false;
         }
-      });
-    }
-
-    function logout() {
-      firebase.auth().signOut().then(() => {
+        
+        return true;
+      } catch (err) {
+        console.error('Erro de verificação:', err);
+        alert('Erro ao verificar suas credenciais de administrador.');
         window.location.href = '/login';
-      }).catch((err) => {
-        console.error('Erro ao fazer logout:', err);
-      });
+        return false;
+      }
     }
 
-    bootstrap();
+    function changeTab(tab) {
+      // Ocultar todas as abas
+      document.getElementById('inscricoesTab').style.display = 'none';
+      document.getElementById('mensagensTab').style.display = 'none';
+      document.getElementById('esportesTab').style.display = 'none';
+      
+      // Remover classe ativa de todas as abas
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      
+      // Mostrar a aba selecionada
+      document.getElementById(`${tab}Tab`).style.display = 'block';
+      
+      // Adicionar classe ativa à aba selecionada
+      document.querySelector(`.tab[onclick="changeTab('${tab}')"]`).classList.add('active');
+      
+      currentTab = tab;
+    }
+
+    async function carregarEsportes() {
+      try {
+        const token = await firebaseUser.getIdToken();
+        const res = await fetch('/api/esportes', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (!res.ok) {
+          throw new Error('Falha ao carregar esportes');
+        }
+        
+        const esportes = await res.json();
+        
+        // Preencher o seletor de esportes
+        const selector = document.getElementById('esporteSelector');
+        selector.innerHTML = '<option value="">Selecione um esporte...</option>';
+        
+        esportes.forEach(esporte => {
+          const option = document.createElement('option');
+          option.value = esporte.id;
+          option.textContent = esporte.nome;
+          selector.appendChild(option);
+        });
+        
+        
+        // Preencher a lista de esportes para gerenciamento
+        const listaEsportes = document.getElementById('listaEsportes');
+        listaEsportes.innerHTML = '';
+        
+        esportes.forEach(esporte => {
+          const div = document.createElement('div');
+          div.className = 'card';
+          div.innerHTML = `
+            <h3>${esporte.nome}</h3>
+            <button onclick="editarEsporte('${esporte.id}')">Editar</button>
+            <button class="reject" onclick="removerEsporte('${esporte.id}')">Remover</button>
+          `;
+          listaEsportes.appendChild(div);
+        });
+      } catch (err) {
+        console.error('Erro ao carregar esportes:', err);
+        alert('Erro ao carregar a lista de esportes.');
+      }
+    }
+
+    async function carregarPendentes(esporteId) {
+      if (!esporteId) {
+        document.getElementById('listaInscricoes').innerHTML = 
+          '<p>Selecione um esporte para ver as inscrições pendentes.</p>';
+        return;
+      }
+      
+      try {
+        const token = await firebaseUser.getIdToken();
+        const res = await fetch(`/api/inscricoes/pendentes/${esporteId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (!res.ok) {
+          throw new Error('Falha ao carregar inscrições pendentes');
+        }
+        
+        const inscricoes = await res.json();
+        const lista = document.getElementById('listaInscricoes');
+        
+        if (inscricoes.length === 0) {
+          lista.innerHTML = '<p>Não há inscrições pendentes para este esporte.</p>';
+          return;
+        }
+        
+        lista.innerHTML = '';
+        inscricoes.forEach(i => {
+          const div = document.createElement('div');
+          div.className = 'card';
+          div.innerHTML = `
+            <h3>${i.usuario.nome}</h3>
+            <p>Curso: ${i.usuario.curso}</p>
+            <p>Telefone: ${i.usuario.telefone}</p>
+            <p>Data de inscrição: ${new Date(i.criadaEm).toLocaleString()}</p>
+            <div>
+              <button onclick="atualizarStatus('${i.id}', 'aceito')">Aceitar</button>
+              <button class="reject" onclick="atualizarStatus('${i.id}', 'recusado')">Recusar</button>
+            </div>
+          `;
+          lista.appendChild(div);
+        });
+      } catch (err) {
+        console.error('Erro ao carregar pendentes:', err);
+        document.getElementById('listaInscricoes').innerHTML = 
+          '<p>Erro ao carregar inscrições pendentes. Por favor, tente novamente.</p>';
+      }
+    }
+
+    async function atualizarStatus(id, status) {
+      try {
+        const token = await firebaseUser.getIdToken();
+        const res = await fetch(`/api/inscricoes/${id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ status })
+        });
+        
+        if (!res.ok) {
+          throw new Error('Falha ao atualizar status');
+        }
+        
+        alert(`Inscrição ${status === 'aceito' ? 'aceita' : 'recusada'} com sucesso!`);
+        
+        // Recarregar a lista de pendentes
+        const esporteId = document.getElementById('esporteSelector').value;
+        await carregarPendentes(esporteId);
+      } catch (err) {
+        console.error('Erro ao atualizar status:', err);
+        alert(`Erro ao ${status === 'aceito' ? 'aceitar' : 'recusar'} inscrição.`);
+      }
+    }
+
+    async function carregarMensagens() {
+      try {
+        const container = document.getElementById('listaMensagens');
+        if (!container) {
+          console.error("Elemento 'listaMensagens' não encontrado");
+          return;
+        }
+        
+        container.innerHTML = '<p class="carregando">Carregando mensagens...</p>';
+        
+        const token = await firebaseUser.getIdToken();
+        const esporteId = document.getElementById('esporteMensagens').value;
+        const url = `/api/mensagens/${esporteId}`; 
+        
+        console.log("Buscando mensagens de:", url);
+        
+        const response = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Erro ao carregar mensagens: ${response.status} ${response.statusText}`);
+        }
+        
+        const mensagens = await response.json();
+        
+        if (mensagens.length === 0) {
+          container.innerHTML = '<p class="text-muted">Não há mensagens para exibir.</p>';
+          return;
+        }
+        
+        container.innerHTML = '';
+        console.log("Mensagens recebidas:", mensagens);
+        
+        mensagens.forEach(msg => {
+          // Verificar o formato do ID
+          console.log(`Mensagem: ID=${msg._id || msg.id}, conteúdo=${msg.texto || msg.conteudo}`);
+          
+          // Corrigir para usar o formato correto de ID do MongoDB
+          const messageId = msg._id || msg.id;
+          
+          if (!messageId) {
+            console.error("Mensagem sem ID detectada:", msg);
+          }
+          
+          const div = document.createElement('div');
+          div.className = msg.fixada ? 'mensagem fixada' : 'mensagem';
+          div.innerHTML = `
+            <div class="mensagem-header">
+              <strong>${msg.usuario?.nome || msg.usuarioNome || 'Usuário'}</strong>
+              ${msg.fixada ? '<span class="badge badge-info">Fixada</span>' : ''}
+            </div>
+            <div class="mensagem-conteudo">${msg.texto || msg.conteudo}</div>          <div class="mensagem-footer">
+              <span>Enviada em ${new Date(msg.criadaEm).toLocaleString()}</span>
+              <span style="font-size: smaller; color: #888;">ID: ${messageId}</span>
+              <div class="mensagem-acoes">
+                <button class="btn btn-sm ${msg.fixada ? 'btn-warning' : 'btn-fixar'}" 
+                        onclick="fixarMensagem('${messageId}', ${!msg.fixada})">
+                  ${msg.fixada ? 'Desafixar' : 'Fixar'}
+                </button>
+                <button class="btn btn-sm btn-danger" onclick="excluirMensagem('${messageId}')">
+                  Excluir
+                </button>
+              </div>
+            </div>
+          `;
+          container.appendChild(div);
+        });
+      } catch (err) {
+        console.error('Erro ao carregar mensagens:', err);
+        const container = document.getElementById('listaMensagens');
+        if (container) {
+          container.innerHTML = `<div class="alert alert-danger">Erro ao carregar mensagens: ${err.message}</div>`;
+        }
+      }
+    }
+
+    async function enviarMensagem() {
+      try {
+        const mensagemTexto = document.getElementById('mensagemTexto').value.trim();
+        const esporteId = document.getElementById('esporteMensagens').value;
+        
+        if (!mensagemTexto) {
+          alert('Digite uma mensagem para enviar');
+          return;
+        }
+        
+        const token = await firebaseUser.getIdToken();
+        
+        // Usar a rota com o parâmetro esporteId
+        const response = await fetch(`/api/mensagens/${esporteId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            texto: mensagemTexto,  // Usamos 'texto' em vez de 'conteudo'
+            conteudo: mensagemTexto // Enviamos ambos para garantir compatibilidade
+          })
+        });
+        
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || 'Falha ao enviar mensagem');
+        }
+        
+        document.getElementById('mensagemTexto').value = '';
+        await carregarMensagens();
+        
+        alert('Mensagem enviada com sucesso!');
+      } catch (err) {
+        console.error('Erro ao enviar mensagem:', err);
+        alert(`Erro ao enviar mensagem: ${err.message}`);
+      }
+    }    async function fixarMensagem(id, fixada) {
+      try {
+        // Garantir que temos um ID válido
+        if (!id) {
+          throw new Error('ID da mensagem não fornecido');
+        }
+        
+        console.log("Tentando fixar/desfixar mensagem com ID:", id, "Fixada:", fixada);
+        const token = await firebaseUser.getIdToken();
+        
+        // Removendo caracteres problemáticos ou espaços em branco
+        const sanitizedId = id.toString().trim();
+        
+        const res = await fetch(`/api/mensagens/${encodeURIComponent(sanitizedId)}/fixar`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ fixada })
+        });
+        
+        // Exibe detalhes completos da resposta para debug
+        console.log("Resposta da operação fixar:", {
+          status: res.status,
+          statusText: res.statusText,
+          headers: [...res.headers].reduce((obj, [key, val]) => ({...obj, [key]: val}), {})
+        });
+        
+        if (!res.ok) {
+          const errorData = await res.json().catch(e => ({ error: "Não foi possível ler o corpo da resposta" }));
+          console.error("Detalhes do erro:", errorData);
+          throw new Error(`Falha ao fixar/desfixar mensagem: ${res.status} ${errorData.error || res.statusText}`);
+        }
+        
+        await carregarMensagens();
+        console.log("Mensagem atualizada com sucesso!");
+      } catch (err) {
+        console.error('Erro ao fixar/desfixar mensagem:', err);
+        alert(`Erro ao fixar/desfixar mensagem: ${err.message}`);
+      }
+    }async function excluirMensagem(id) {
+      if (!confirm('Tem certeza que deseja excluir esta mensagem?')) {
+        return;
+      }
+      
+      try {
+        // Garantir que temos um ID válido
+        if (!id) {
+          throw new Error('ID da mensagem não fornecido');
+        }
+        
+        console.log("Tentando excluir mensagem com ID:", id);
+        const token = await firebaseUser.getIdToken();
+        
+        // Removendo caracteres problemáticos ou espaços em branco
+        const sanitizedId = id.toString().trim();
+        
+        const res = await fetch(`/api/mensagens/${encodeURIComponent(sanitizedId)}`, {
+          method: 'DELETE',
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        // Exibe detalhes completos da resposta para debug
+        console.log("Resposta da exclusão:", {
+          status: res.status,
+          statusText: res.statusText,
+          headers: [...res.headers].reduce((obj, [key, val]) => ({...obj, [key]: val}), {})
+        });
+        
+        if (!res.ok) {
+          const errorData = await res.json().catch(e => ({ error: "Não foi possível ler o corpo da resposta" }));
+          console.error("Detalhes do erro:", errorData);
+          throw new Error(`Falha ao excluir mensagem: ${res.status} ${errorData.error || res.statusText}`);
+        }
+        
+        await carregarMensagens();
+        alert("Mensagem excluída com sucesso!");
+      } catch (err) {
+        console.error('Erro ao excluir mensagem:', err);
+        alert(`Erro ao excluir mensagem: ${err.message}`);
+      }
+    }
+
+    async function adicionarEsporte() {
+      try {
+        const nome = document.getElementById('novoEsporteNome').value.trim();
+        
+        if (!nome) {
+          return alert('Por favor, digite um nome para o esporte.');
+        }
+        
+        const token = await firebaseUser.getIdToken();
+        const res = await fetch('/api/esportes', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ nome })
+        });
+        
+        if (!res.ok) {
+          throw new Error('Falha ao adicionar esporte');
+        }
+        
+        document.getElementById('novoEsporteNome').value = '';
+        alert('Esporte adicionado com sucesso!');
+        await carregarEsportes();
+      } catch (err) {
+        console.error('Erro ao adicionar esporte:', err);
+        alert('Erro ao adicionar esporte.');
+      }
+    }
+
+    async function editarEsporte(id) {
+      const novoNome = prompt('Digite o novo nome para o esporte:');
+      
+      if (!novoNome) return;
+      
+      try {
+        const token = await firebaseUser.getIdToken();
+        const res = await fetch(`/api/esportes/${id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ nome: novoNome })
+        });
+        
+        if (!res.ok) {
+          throw new Error('Falha ao editar esporte');
+        }
+        
+        alert('Esporte atualizado com sucesso!');
+        await carregarEsportes();
+      } catch (err) {
+        console.error('Erro ao editar esporte:', err);
+        alert('Erro ao editar esporte.');
+      }
+    }
+
+    async function removerEsporte(id) {
+      if (!confirm('Tem certeza que deseja remover este esporte? Esta ação não pode ser desfeita.')) {
+        return;
+      }
+      
+      try {
+        const token = await firebaseUser.getIdToken();
+        const res = await fetch(`/api/esportes/${id}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (!res.ok) {
+          throw new Error('Falha ao remover esporte');
+        }
+        
+        alert('Esporte removido com sucesso!');
+        await carregarEsportes();
+      } catch (err) {
+        console.error('Erro ao remover esporte:', err);
+        alert('Erro ao remover esporte.');
+      }
+    }
+
+    async function logout() {
+      try {
+        await firebase.auth().signOut();
+        window.location.href = '/login';
+      } catch (err) {
+        console.error('Erro ao fazer logout:', err);
+        alert('Erro ao fazer logout. Por favor, tente novamente.');
+      }
+    }    // Carregar esportes para o seletor de mensagens
+    async function carregarEsportesParaMensagens() {
+      try {
+        const token = await firebase.auth().currentUser.getIdToken();
+        const response = await fetch('/api/esportes', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Erro ao carregar esportes');
+        }
+        
+        const esportes = await response.json();
+        
+        // Preencher o seletor de envio de mensagens
+        const seletor = document.getElementById('esporteMensagens');
+        if (!seletor) {
+          console.error("Elemento 'esporteMensagens' não encontrado");
+          return;
+        }
+        
+        // Manter apenas a opção "Geral"
+        seletor.innerHTML = '<option value="0">Geral (Todos os Esportes)</option>';
+        
+        // Adicionar os esportes ao seletor
+        esportes.forEach(esporte => {
+          // Pular "Geral" no seletor de envio pois já foi adicionado
+          if (esporte.id !== "0") {
+            const option = document.createElement('option');
+            option.value = esporte.id;
+            option.textContent = esporte.nome;
+            seletor.appendChild(option);
+          }
+        });
+        
+      } catch (error) {
+        console.error('Erro ao carregar esportes:', error);
+        alert('Erro ao carregar esportes: ' + error.message);
+      }
+    }
+
+    // Muda o esporte e carrega as mensagens dele
+    async function mudarEsporteMensagens(esporteId) {
+      try {
+        // Atualizar o título da seção de mensagens
+        const select = document.getElementById('esporteMensagens');
+        const option = select.options[select.selectedIndex];
+        const nomeEsporte = option ? option.text : "Geral";
+        
+        document.getElementById('esporteAtual').textContent = nomeEsporte;
+        
+        // Recarregar as mensagens
+        await carregarMensagens();
+      } catch (error) {
+        console.error('Erro ao mudar esporte:', error);
+      }
+    }    // Iniciar a aplicação
+    main();
   </script>
 </body>
 </html>

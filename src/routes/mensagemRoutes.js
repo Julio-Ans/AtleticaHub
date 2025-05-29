@@ -3,13 +3,16 @@ const router = express.Router();
 const mensagemController = require('../controllers/mensagemController');
 const verificarToken = require('../middlewares/verificarToken');
 
-// Enviar mensagem
-router.post('/', verificarToken, mensagemController.enviarMensagem);
+// Protege todas as rotas com autenticação
+router.use(verificarToken);
 
-// Buscar mensagens entre o usuário logado e outro
-router.get('/:receiverId', verificarToken, mensagemController.listarMensagens);
+// Mensagens por esporte
+router.get('/:esporteId', mensagemController.listarMensagens);
+router.post('/:esporteId', mensagemController.criarMensagem);
 
-router.get('/nao-lidas', verificarToken, mensagemController.listarNaoLidas);
-
+// Editar e excluir
+router.put('/:id', mensagemController.editarMensagem);
+router.delete('/:id', mensagemController.excluirMensagem);
+router.patch('/:id/fixar', mensagemController.fixarMensagem);
 
 module.exports = router;

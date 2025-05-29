@@ -1,19 +1,41 @@
-const admin = require('../config/firebaseAdmin'); 
+const admin = require('../config/firebaseAdmin');
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
-// Verifica token e adiciona req.user
 async function verificarToken(req, res, next) {
   const authHeader = req.headers.authorization;
 
+  // Verifica se o token existe e começa com 'Bearer '
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Token ausente ou inválido' });
   }
 
-  const token = authHeader.split(' ')[1]; // Extrai o token do cabeçalho
+  // Extrai o token
+  const token = authHeader.split(' ')[1];
 
   try {
-    const decodedToken = await admin.auth().verifyIdToken(token); // Verifica o token com Firebase Admin
-    req.user = decodedToken; // Adiciona o usuário autenticado em req.user
-    next(); // Passa para a próxima função/middleware
+    // Valida com Firebase Admin
+    const decodedToken = await admin.auth().verifyIdToken(token);
+
+    // Busca o usuário completo no PostgreSQL (por UID do Firebase)
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: decodedToken.uid }
+    });
+
+    if (!usuario) {
+      return res.status(401).json({ error: 'Usuário não encontrado no banco.' });
+    }
+
+    // Preenche os dados que o controller precisa
+    req.user = {
+      uid: usuario.id,
+      nome: usuario.nome,
+      role: usuario.role
+    };
+
+    // ✅ Chama o próximo middleware ou controller
+    next();
+
   } catch (err) {
     console.error('Erro ao verificar token:', err);
     return res.status(401).json({ error: 'Token inválido' });

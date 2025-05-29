@@ -6,49 +6,254 @@
   <title>Login - AtléticaHub</title>
   <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-auth-compat.js"></script>
+  <style>
+    :root {
+      --primary-color: #007bff;
+      --secondary-color: #6c757d;
+      --success-color: #28a745;
+      --danger-color: #dc3545;
+      --light-color: #f8f9fa;
+      --dark-color: #343a40;
+      --border-color: #dee2e6;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background-color: #f5f5f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      padding: 20px;
+    }
+    
+    .login-container {
+      width: 100%;
+      max-width: 400px;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+    }
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: var(--primary-color);
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+    }
+    
+    input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      font-size: 16px;
+    }
+    
+    button {
+      width: 100%;
+      padding: 12px;
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    button:hover {
+      background-color: #0069d9;
+    }
+    
+    .alert {
+      padding: 10px 15px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    
+    .alert-danger {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    
+    .links {
+      margin-top: 20px;
+      text-align: center;
+    }
+    
+    .links a {
+      color: var(--primary-color);
+      text-decoration: none;
+    }
+    
+    .links a:hover {
+      text-decoration: underline;
+    }
+    
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+      margin-right: 10px;
+      display: none;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
 </head>
 <body>
-  <h1>Login</h1>
-  <form id="loginForm">
-    <label>Email:<br><input type="email" id="email" required></label><br><br>
-    <label>Senha:<br><input type="password" id="password" required></label><br><br>
-    <button type="submit">Login</button>
-  </form>
-  <pre id="response"></pre>
+  <div class="login-container">
+    <h1>AtléticaHub</h1>
+    
+    <div id="errorAlert" class="alert alert-danger"></div>
+    
+    <form id="loginForm">
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" required autocomplete="email">
+      </div>
+      
+      <div class="form-group">
+        <label for="password">Senha</label>
+        <input type="password" id="password" required autocomplete="current-password">
+      </div>
+      
+      <button type="submit"><span id="spinner" class="spinner"></span>Entrar</button>
+    </form>
+    
+    <div class="links">
+      <p>Não tem uma conta? <a href="/signup">Cadastre-se</a></p>
+    </div>
+  </div>
 
   <script>
     async function bootstrap() {
-      const resp = await fetch('/config/firebase');
-      const cfg = await resp.json();
-      firebase.initializeApp(cfg);
-      const auth = firebase.auth();
-      const form = document.getElementById('loginForm');
-      const responseEl = document.getElementById('response');
+      try {
+        const resp = await fetch('/config/firebase');
+        const cfg = await resp.json();
+        firebase.initializeApp(cfg);
+        const auth = firebase.auth();
+        const form = document.getElementById('loginForm');
+        const errorAlert = document.getElementById('errorAlert');
+        const spinner = document.getElementById('spinner');
+        
+        // Verificar se o usuário já está logado
+        firebase.auth().onAuthStateChanged(user => {
+          if (user) {
+            redirectUserBasedOnRole();
+          }
+        });
 
-      form.addEventListener('submit', async e => {
-        e.preventDefault();
-        try {
-          const email = form.email.value;
-          const pwd = form.password.value;
-          const cred = await auth.signInWithEmailAndPassword(email, pwd);
-          const idToken = await cred.user.getIdToken();
-
-          const apiRes = await fetch('/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ idToken })
-          });
-          const data = await apiRes.json();
-          if (!apiRes.ok) throw new Error(data.error);
-
-          if (data.role === 'admin') window.location.href = '/admin-dashboard';
-          else window.location.href = '/user-dashboard';
-        } catch (err) {
-          responseEl.textContent = `Erro: ${err.message}`;
-          responseEl.style.color = 'red';
+        // Função para redirecionar com base no papel do usuário
+        async function redirectUserBasedOnRole() {
+          try {
+            const token = await firebase.auth().currentUser.getIdToken();
+            const res = await fetch('/auth/verify-user', {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            
+            if (res.ok) {
+              const data = await res.json();
+              if (data.user.role === 'admin') {
+                window.location.href = '/admin-dashboard';
+              } else {
+                window.location.href = '/user-dashboard';
+              }
+            }
+          } catch (err) {
+            console.error('Erro ao verificar papel do usuário:', err);
+          }
         }
-      });
+
+        // Ouvinte do formulário
+        form.addEventListener('submit', async e => {
+          e.preventDefault();
+          errorAlert.style.display = 'none';
+          spinner.style.display = 'inline-block';
+          form.querySelector('button').disabled = true;
+          
+          try {
+            const email = form.email.value.trim();
+            const password = form.password.value;
+            
+            // Autenticação no Firebase
+            const userCredential = await auth.signInWithEmailAndPassword(email, password);
+            const idToken = await userCredential.user.getIdToken();
+
+            // Chamada para o backend
+            const apiRes = await fetch('/auth/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ idToken })
+            });
+            
+            if (!apiRes.ok) {
+              const errorData = await apiRes.json();
+              throw new Error(errorData.error || 'Erro na autenticação');
+            }
+            
+            const userData = await apiRes.json();
+            
+            // Redirecionar com base no papel
+            if (userData.role === 'admin') {
+              window.location.href = '/admin-dashboard';
+            } else {
+              window.location.href = '/user-dashboard';
+            }
+          } catch (err) {
+            console.error('Erro no login:', err);
+            errorAlert.textContent = tratarErroFirebase(err.message);
+            errorAlert.style.display = 'block';
+            spinner.style.display = 'none';
+            form.querySelector('button').disabled = false;
+          }
+        });
+        
+        // Função para traduzir erros do Firebase
+        function tratarErroFirebase(erro) {
+          if (erro.includes('user-not-found') || erro.includes('wrong-password')) {
+            return 'Email ou senha incorretos';
+          } else if (erro.includes('too-many-requests')) {
+            return 'Muitas tentativas de login. Tente novamente mais tarde';
+          } else if (erro.includes('invalid-email')) {
+            return 'Email inválido';
+          } else {
+            return 'Erro ao fazer login: ' + erro;
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao inicializar:', err);
+        document.body.innerHTML = '<div style="color: red; text-align: center; margin-top: 50px;">Erro ao carregar a página de login. Por favor, tente novamente.</div>';
+      }
     }
+    
     bootstrap();
   </script>
 </body>

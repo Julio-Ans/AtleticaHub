@@ -50,10 +50,10 @@ model InviteCode {
 }
 
 model Esporte {
-  id        Int      @id @default(autoincrement())
-  codigo    String   @unique
+  id        String    @id @default(uuid())
   nome      String
-  createdAt DateTime @default(now())
+  criadoEm  DateTime  @default(now())
+  inscricoes Inscricao[]
 }
 
 model Usuario {
@@ -64,4 +64,15 @@ model Usuario {
   curso          String
   role           String @default("user")   // Adicionando o campo `role` para definir o tipo de usuário
   createdAt      DateTime @default(now())
+  inscricoes     Inscricao[]
+}
+
+model Inscricao {
+  id        String   @id @default(uuid())
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
+  usuarioId String
+  esporte   Esporte  @relation(fields: [esporteId], references: [id])
+  esporteId String
+  status    String   @default("pendente") // pendente | aceito | recusado
+  criadaEm  DateTime @default(now())
 }
