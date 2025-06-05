@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const eventInscricaoService = require('../services/eventInscricaoService');
 
 module.exports = {
   // Inscrever usuário em evento
@@ -7,12 +6,14 @@ module.exports = {
     try {
       const usuarioId = req.user.uid;
       const { eventId } = req.params;
-      // Verifica se já está inscrito
-      const jaInscrito = await prisma.eventInscricao.findFirst({ where: { usuarioId, eventId } });
-      if (jaInscrito) return res.status(400).json({ error: 'Usuário já inscrito neste evento' });
-      const inscricao = await prisma.eventInscricao.create({ data: { usuarioId, eventId } });
+      
+      const inscricao = await eventInscricaoService.inscreverUsuario(usuarioId, eventId);
       res.status(201).json(inscricao);
     } catch (err) {
+      console.error('Erro ao inscrever no evento:', err);
+      if (err.message.includes('já inscrito')) {
+        return res.status(400).json({ error: err.message });
+      }
       res.status(400).json({ error: 'Erro ao inscrever no evento' });
     }
   },
@@ -22,11 +23,14 @@ module.exports = {
     try {
       const usuarioId = req.user.uid;
       const { eventId } = req.params;
-      const inscricao = await prisma.eventInscricao.findFirst({ where: { usuarioId, eventId } });
-      if (!inscricao) return res.status(404).json({ error: 'Inscrição não encontrada' });
-      await prisma.eventInscricao.delete({ where: { id: inscricao.id } });
-      res.json({ message: 'Inscrição cancelada com sucesso' });
+      
+      const result = await eventInscricaoService.cancelarInscricao(usuarioId, eventId);
+      res.json(result);
     } catch (err) {
+      console.error('Erro ao cancelar inscrição:', err);
+      if (err.message.includes('não encontrada')) {
+        return res.status(404).json({ error: err.message });
+      }
       res.status(400).json({ error: 'Erro ao cancelar inscrição' });
     }
   },
@@ -35,9 +39,10 @@ module.exports = {
   async meusEventos(req, res) {
     try {
       const usuarioId = req.user.uid;
-      const inscricoes = await prisma.eventInscricao.findMany({ where: { usuarioId } });
+      const inscricoes = await eventInscricaoService.listarEventosDoUsuario(usuarioId);
       res.json(inscricoes);
     } catch (err) {
+      console.error('Erro ao listar inscrições:', err);
       res.status(400).json({ error: 'Erro ao listar inscrições' });
     }
   }

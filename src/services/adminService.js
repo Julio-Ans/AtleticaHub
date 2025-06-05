@@ -1,5 +1,6 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const userRepository = require('../repositories/userRepository');
+const esporteRepository = require('../repositories/esporteRepository');
+const inscricaoRepository = require('../repositories/inscricaoRepository');
 
 /**
  * Inscreve automaticamente um administrador em todos os esportes
@@ -8,25 +9,21 @@ const prisma = new PrismaClient();
 async function inscreverAdminEmTodosEsportes(userId) {
   try {
     // Buscar todos os esportes
-    const esportes = await prisma.esporte.findMany();
+    const esportes = await esporteRepository.findAll();
     
     // Para cada esporte, verificar se o admin já está inscrito
     for (const esporte of esportes) {
-      const inscricaoExistente = await prisma.inscricao.findFirst({
-        where: {
-          usuarioId: userId,
-          esporteId: esporte.id
-        }
-      });
+      const inscricaoExistente = await inscricaoRepository.findByUserAndSport(
+        userId, 
+        esporte.id
+      );
       
       // Se não estiver inscrito, criar inscrição com status 'aceito'
       if (!inscricaoExistente) {
-        await prisma.inscricao.create({
-          data: {
-            usuarioId: userId,
-            esporteId: esporte.id,
-            status: 'aceito' // Admins são aceitos automaticamente
-          }
+        await inscricaoRepository.create({
+          usuarioId: userId,
+          esporteId: esporte.id,
+          status: 'aceito' // Admins são aceitos automaticamente
         });
         console.log(`Admin ${userId} inscrito no esporte ${esporte.nome}`);
       }
@@ -46,28 +43,20 @@ async function inscreverAdminEmTodosEsportes(userId) {
 async function inscreverTodosAdminsEmEsporte(esporteId) {
   try {
     // Buscar todos os admins
-    const admins = await prisma.usuario.findMany({
-      where: {
-        role: 'admin'
-      }
-    });
+    const admins = await userRepository.findByRole('admin');
     
     // Para cada admin, criar inscrição no esporte se não existir
     for (const admin of admins) {
-      const inscricaoExistente = await prisma.inscricao.findFirst({
-        where: {
-          usuarioId: admin.id,
-          esporteId: esporteId
-        }
-      });
+      const inscricaoExistente = await inscricaoRepository.findByUserAndSport(
+        admin.id,
+        esporteId
+      );
       
       if (!inscricaoExistente) {
-        await prisma.inscricao.create({
-          data: {
-            usuarioId: admin.id,
-            esporteId: esporteId,
-            status: 'aceito'
-          }
+        await inscricaoRepository.create({
+          usuarioId: admin.id,
+          esporteId: esporteId,
+          status: 'aceito'
         });
         console.log(`Admin ${admin.nome} inscrito no novo esporte ${esporteId}`);
       }

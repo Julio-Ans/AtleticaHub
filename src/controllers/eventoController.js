@@ -1,4 +1,4 @@
-const Evento = require('../models/evento.model');
+const eventoService = require('../services/eventoService');
 const { Storage } = require('@google-cloud/storage');
 const path = require('path');
 const admin = require('../config/firebaseAdmin');
@@ -15,50 +15,35 @@ const storage = new Storage({
 // Firebase Storage bucket name format
 const projectId = serviceAccount.project_id;
 const bucketName = `${projectId}.appspot.com`;
-console.log(`Trying to access bucket: ${bucketName}`);
 
-// Verificar se o bucket existe e criar se necessário
+// Verificar se o bucket existe e usar o correto
 let bucket;
 async function initializeBucket() {
   try {
     bucket = storage.bucket(bucketName);
-    
-    // Verificar se o bucket existe
     const [exists] = await bucket.exists();
+    
     if (!exists) {
-      console.log(`Bucket ${bucketName} não existe. Tentando criar...`);
+      // Tentar com o bucket padrão do Firebase Storage
+      const firebaseBucketName = `${projectId}.firebasestorage.app`;
+      bucket = storage.bucket(firebaseBucketName);
+      const [firebaseExists] = await bucket.exists();
       
-      // Criar o bucket
-      await storage.createBucket(bucketName, {
-        location: 'US',
-        storageClass: 'STANDARD',
-      });
-      console.log(`Bucket ${bucketName} criado com sucesso!`);
-    } else {
-      console.log(`Bucket ${bucketName} já existe.`);
+      if (firebaseExists) {
+        global.bucketName = firebaseBucketName;
+      }
     }
-    
-    console.log('Bucket object created successfully');
   } catch (err) {
-    console.error('Error accessing/creating bucket:', err);
-    console.log('Tentando usar bucket padrão do Firebase Storage...');
-    
-    // Tentar com o bucket padrão do Firebase Storage
+    // Fallback para o bucket Firebase Storage
     const firebaseBucketName = `${projectId}.firebasestorage.app`;
-    console.log(`Tentando bucket Firebase Storage: ${firebaseBucketName}`);
-    
     try {
       bucket = storage.bucket(firebaseBucketName);
       const [exists] = await bucket.exists();
       if (exists) {
-        console.log(`Usando bucket Firebase Storage: ${firebaseBucketName}`);
-        // Atualizar o bucketName global
         global.bucketName = firebaseBucketName;
-      } else {
-        console.error(`Bucket Firebase Storage ${firebaseBucketName} também não existe.`);
       }
     } catch (firebaseErr) {
-      console.error('Erro ao tentar bucket Firebase Storage:', firebaseErr);
+      console.error('Erro ao conectar com Firebase Storage:', firebaseErr);
     }
   }
 }
@@ -66,39 +51,34 @@ async function initializeBucket() {
 // Inicializar o bucket
 initializeBucket();
 
-module.exports = {
-  // Listar todos os eventos
+module.exports = {  // Listar todos os eventos
   async listar(req, res) {
     try {
-      const eventos = await Evento.find().sort({ data: 1 });
+      const eventos = await eventoService.listarEventos();
       res.json(eventos);
     } catch (err) {
+      console.error('Erro ao listar eventos:', err);
       res.status(500).json({ error: 'Erro ao listar eventos' });
     }
-  },
-
-  // Criar evento (admin)
+  },  // Criar evento (admin)
   async criar(req, res) {
     try {
       const { titulo, descricao, tipo, data, local } = req.body;
-      const criadorId = req.user.uid;      let fotoUrl = undefined;
-      
+      const criadorId = req.user.uid;
+      let fotoUrl = undefined;
+        
       if (req.file) {
-        try {          console.log('Iniciando upload de arquivo para o Firebase Storage');
-          
+        try {
           // Upload para o Firebase Storage
           const ext = path.extname(req.file.originalname);
           const filename = `eventos/${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`;
           
           // Use the global bucket name if it was updated during initialization
           const currentBucketName = global.bucketName || bucketName;
-          console.log(`Bucket: ${currentBucketName}`);
-          console.log(`Filename: ${filename}`);
           
           const file = bucket.file(filename);
           
           // Salvando o arquivo no bucket
-          console.log('Salvando arquivo no bucket...');
           await file.save(req.file.buffer, {
             contentType: req.file.mimetype,
             public: true,
@@ -111,46 +91,42 @@ module.exports = {
             expires: '03-01-2500', // A very long expiration
           });
           
-          console.log(`URL pública gerada via signed URL: ${url}`);
-            // Standard Google Cloud Storage URL format
-          const publicUrl = `https://storage.googleapis.com/${currentBucketName}/${filename}`;
-          console.log(`URL pública gerada via padrão: ${publicUrl}`);
-            // Use the signed URL which should work more reliably
           fotoUrl = url;
         } catch (uploadErr) {
-          console.error('Erro ao fazer upload da imagem:', uploadErr);
-          console.error('Stack do erro:', uploadErr.stack);
-          console.error('Detalhes do arquivo:', {
-            filename: req.file.originalname,
-            size: req.file.size,
-            mimetype: req.file.mimetype
-          });
-          console.error('Detalhes do bucket:', {
-            bucketName,
-            projectId: serviceAccount.project_id
-          });
+          console.error('Erro ao fazer upload da imagem:', uploadErr.message);
           return res.status(500).json({ error: 'Erro ao fazer upload da imagem', details: uploadErr.message });
         }
       }
-      const evento = await Evento.create({ titulo, descricao, tipo, data, local, criadorId, fotoUrl });
+      
+      const evento = await eventoService.criarEvento({ 
+        titulo, 
+        descricao, 
+        tipo, 
+        data, 
+        local, 
+        criadorId, 
+        fotoUrl 
+      });
       res.status(201).json(evento);
     } catch (err) {
       console.error('Erro ao criar evento:', err);
       res.status(400).json({ error: 'Erro ao criar evento', details: err.message });
     }
   },
-
   // Editar evento (admin)
   async editar(req, res) {
     try {
       const { id } = req.params;
-      const update = req.body;
-      update.updatedAt = new Date();
-      const evento = await Evento.findByIdAndUpdate(id, update, { new: true });
-      if (!evento) return res.status(404).json({ error: 'Evento não encontrado' });
+      const updateData = req.body;
+      
+      const evento = await eventoService.editarEvento(id, updateData);
       res.json(evento);
     } catch (err) {
-      res.status(400).json({ error: 'Erro ao editar evento' });
+      console.error('Erro ao editar evento:', err);
+      if (err.message.includes('não encontrado')) {
+        return res.status(404).json({ error: err.message });
+      }
+      res.status(400).json({ error: 'Erro ao editar evento', details: err.message });
     }
   },
 
@@ -158,11 +134,14 @@ module.exports = {
   async excluir(req, res) {
     try {
       const { id } = req.params;
-      const evento = await Evento.findByIdAndDelete(id);
-      if (!evento) return res.status(404).json({ error: 'Evento não encontrado' });
+      await eventoService.excluirEvento(id);
       res.json({ message: 'Evento excluído com sucesso' });
     } catch (err) {
-      res.status(400).json({ error: 'Erro ao excluir evento' });
+      console.error('Erro ao excluir evento:', err);
+      if (err.message.includes('não encontrado')) {
+        return res.status(404).json({ error: err.message });
+      }
+      res.status(400).json({ error: 'Erro ao excluir evento', details: err.message });
     }
   },
 
@@ -170,30 +149,34 @@ module.exports = {
   async buscar(req, res) {
     try {
       const { id } = req.params;
-      const evento = await Evento.findById(id);
-      if (!evento) return res.status(404).json({ error: 'Evento não encontrado' });
+      const evento = await eventoService.buscarEventoPorId(id);
       res.json(evento);
     } catch (err) {
-      res.status(400).json({ error: 'Erro ao buscar evento' });
+      console.error('Erro ao buscar evento:', err);
+      if (err.message.includes('não encontrado')) {
+        return res.status(404).json({ error: err.message });
+      }
+      res.status(400).json({ error: 'Erro ao buscar evento', details: err.message });
     }
   },
-
   // Inscrever usuário em evento
   async inscrever(req, res) {
     try {
       const { id } = req.params;
       const { nome, email } = req.user;
       const usuarioId = req.user.uid;
-      const evento = await Evento.findById(id);
-      if (!evento) return res.status(404).json({ error: 'Evento não encontrado' });
-      if (evento.inscricoes.some(i => i.usuarioId === usuarioId)) {
-        return res.status(400).json({ error: 'Usuário já inscrito neste evento' });
-      }
-      evento.inscricoes.push({ usuarioId, nome, email });
-      await evento.save();
+      
+      await eventoService.inscreverUsuario(id, { usuarioId, nome, email });
       res.status(201).json({ message: 'Inscrição realizada com sucesso' });
     } catch (err) {
-      res.status(400).json({ error: 'Erro ao inscrever no evento' });
+      console.error('Erro ao inscrever no evento:', err);
+      if (err.message.includes('não encontrado')) {
+        return res.status(404).json({ error: err.message });
+      }
+      if (err.message.includes('já inscrito')) {
+        return res.status(400).json({ error: err.message });
+      }
+      res.status(400).json({ error: 'Erro ao inscrever no evento', details: err.message });
     }
   },
 
@@ -202,17 +185,15 @@ module.exports = {
     try {
       const { id } = req.params;
       const usuarioId = req.user.uid;
-      const evento = await Evento.findById(id);
-      if (!evento) return res.status(404).json({ error: 'Evento não encontrado' });
-      const antes = evento.inscricoes.length;
-      evento.inscricoes = evento.inscricoes.filter(i => i.usuarioId !== usuarioId);
-      if (evento.inscricoes.length === antes) {
-        return res.status(404).json({ error: 'Inscrição não encontrada' });
-      }
-      await evento.save();
+      
+      await eventoService.cancelarInscricao(id, usuarioId);
       res.json({ message: 'Inscrição cancelada com sucesso' });
     } catch (err) {
-      res.status(400).json({ error: 'Erro ao cancelar inscrição' });
+      console.error('Erro ao cancelar inscrição:', err);
+      if (err.message.includes('não encontrado') || err.message.includes('não encontrada')) {
+        return res.status(404).json({ error: err.message });
+      }
+      res.status(400).json({ error: 'Erro ao cancelar inscrição', details: err.message });
     }
   },
 
@@ -220,10 +201,11 @@ module.exports = {
   async meusEventos(req, res) {
     try {
       const usuarioId = req.user.uid;
-      const eventos = await Evento.find({ 'inscricoes.usuarioId': usuarioId });
+      const eventos = await eventoService.listarEventosDoUsuario(usuarioId);
       res.json(eventos);
     } catch (err) {
-      res.status(400).json({ error: 'Erro ao listar eventos inscritos' });
+      console.error('Erro ao listar eventos inscritos:', err);
+      res.status(400).json({ error: 'Erro ao listar eventos inscritos', details: err.message });
     }
   }
 };

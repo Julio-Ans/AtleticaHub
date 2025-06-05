@@ -1,20 +1,22 @@
-const { PrismaClient } = require('@prisma/client');
 const admin = require('../config/firebaseAdmin');
-
-const prisma = new PrismaClient();
+const userRepository = require('../repositories/userRepository');
 
 async function checkEmailDomain(email) {
   const domain = email.split('@')[1];
-  const domainAllowed = await prisma.emailDomain.findUnique({ where: { domain } });
+  const domainAllowed = await userRepository.findEmailDomain(domain);
   return domainAllowed !== null;  // Retorna verdadeiro se o domínio for permitido
 }
 
 async function verifyInviteCode(codigo) {
-  const invite = await prisma.inviteCode.findUnique({ where: { code: codigo } });
+  const invite = await userRepository.findInviteCode(codigo);
   if (!invite || invite.used) {
     return null; // Código inválido ou já utilizado
   }
   return invite;
+}
+
+async function markInviteCodeAsUsed(inviteId) {
+  return await userRepository.markInviteCodeAsUsed(inviteId);
 }
 
 
@@ -58,15 +60,13 @@ async function registerUserInFirebase(email, password) {
 
 async function registerUserService({ uid, email, nome, telefone, curso, dataNascimento, role }) {
   // Criar o usuário no banco de dados (PostgreSQL)
-  const usuario = await prisma.usuario.create({
-    data: {
-      id: uid,
-      nome,
-      telefone,
-      curso,
-      dataNascimento: new Date(dataNascimento),
-      role,  // Atribuir o papel do usuário
-    },
+  const usuario = await userRepository.create({
+    id: uid,
+    nome,
+    telefone,
+    curso,
+    dataNascimento: new Date(dataNascimento),
+    role,  // Atribuir o papel do usuário
   });
 
   return usuario;
@@ -82,14 +82,76 @@ async function verifyIdToken(idToken) {
 }
 
 async function getUsuario(uid) {
-  return await prisma.usuario.findUnique({ where: { id: uid } });
+  return await userRepository.findByUid(uid);
+}
+
+async function loginUser(idToken) {
+  try {
+    // Verificar o token do Firebase
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    const uid = decodedToken.uid;
+    
+    // Buscar ou criar o usuário no banco de dados
+    let usuario = await userRepository.findById(uid);
+    
+    if (!usuario) {
+      // Criar novo usuário com campos mínimos necessários
+      usuario = await userRepository.create({
+        id: uid,
+        email: decodedToken.email,
+        nome: decodedToken.name || decodedToken.email?.split('@')[0] || "Usuário",
+        role: 'user'
+      });
+    }
+    
+    // Retornar informações do usuário
+    return {
+      uid: usuario.id,
+      email: decodedToken.email,
+      nome: usuario.nome,
+      role: usuario.role
+    };
+  } catch (error) {
+    console.error('Erro na autenticação:', error);
+    throw new Error('Falha na autenticação: ' + error.message);
+  }
+}
+
+async function promoteUserToAdmin(userId) {
+  try {
+    // Verificar se o usuário existe
+    const usuario = await userRepository.findById(userId);
+    
+    if (!usuario) {
+      throw new Error('Usuário não encontrado');
+    }
+    
+    // Promover para admin
+    const usuarioAtualizado = await userRepository.updateRole(userId, 'admin');
+    
+    // Inscrever o novo admin em todos os esportes
+    const adminService = require('./adminService');
+    await adminService.inscreverAdminEmTodosEsportes(userId);
+    
+    return {
+      id: usuarioAtualizado.id,
+      nome: usuarioAtualizado.nome,
+      role: usuarioAtualizado.role
+    };
+  } catch (error) {
+    console.error('Erro ao promover usuário:', error);
+    throw error;
+  }
 }
 
 module.exports = {
   checkEmailDomain,
   verifyInviteCode,
+  markInviteCodeAsUsed,
   registerUserService,
   verifyIdToken,
   getUsuario,
-  registerUserInFirebase
+  registerUserInFirebase,
+  loginUser,
+  promoteUserToAdmin
 };

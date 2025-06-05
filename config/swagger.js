@@ -115,6 +115,48 @@ module.exports = {
         },
         required: ["idToken"]
       },
+      RegisterRequest: {
+        type: "object",
+        required: ["email", "password", "nome", "telefone", "curso", "dataNascimento"],
+        properties: {
+          email: { type: "string", format: "email" },
+          password: { type: "string", minLength: 6 },
+          nome: { type: "string" },
+          telefone: { type: "string" },
+          curso: { type: "string" },
+          dataNascimento: { type: "string", format: "date" },
+          codigo: { type: "string", description: "Código de convite opcional para admin" }
+        }
+      },
+      LoginRequest: {
+        type: "object",
+        required: ["idToken"],
+        properties: {
+          idToken: { type: "string", description: "Token JWT do Firebase" }
+        }
+      },
+      UserResponse: {
+        type: "object",
+        properties: {
+          uid: { type: "string" },
+          email: { type: "string" },
+          nome: { type: "string" },
+          telefone: { type: "string" },
+          curso: { type: "string" },
+          role: { type: "string" },
+          dataNascimento: { type: "string", format: "date" },
+          createdAt: { type: "string", format: "date-time" }
+        }
+      },
+      ApiResponse: {
+        type: "object",
+        properties: {
+          success: { type: "boolean" },
+          message: { type: "string" },
+          user: { "$ref": "#/components/schemas/UserResponse" },
+          error: { type: "string" }
+        }
+      },
       ErrorResponse: {
         type: "object",
         properties: {
@@ -244,6 +286,153 @@ module.exports = {
               }
             }
           }
+        }
+      }
+    },
+    
+    // API de Autenticação para Frontend Externo
+    "/api/auth/register": {
+      post: {
+        summary: "Registrar novo usuário",
+        tags: ["Auth API"],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { "$ref": "#/components/schemas/RegisterRequest" }
+            }
+          }
+        },
+        responses: {
+          "201": {
+            description: "Usuário registrado com sucesso",
+            content: {
+              "application/json": {
+                schema: { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "400": { description: "Erro de validação" },
+          "403": { description: "Email não autorizado" },
+          "409": { description: "Usuário já existe" }
+        }
+      }
+    },
+    "/api/auth/login": {
+      post: {
+        summary: "Login do usuário",
+        tags: ["Auth API"],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { "$ref": "#/components/schemas/LoginRequest" }
+            }
+          }
+        },
+        responses: {
+          "200": {
+            description: "Login realizado com sucesso",
+            content: {
+              "application/json": {
+                schema: { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "400": { description: "Token não fornecido" },
+          "401": { description: "Token inválido" },
+          "404": { description: "Usuário não encontrado" }
+        }
+      }
+    },
+    "/api/auth/verify": {
+      post: {
+        summary: "Verificar token de autenticação",
+        tags: ["Auth API"],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { "$ref": "#/components/schemas/LoginRequest" }
+            }
+          }
+        },
+        responses: {
+          "200": { description: "Token válido" },
+          "401": { description: "Token inválido" }
+        }
+      }
+    },
+    "/api/auth/profile": {
+      post: {
+        summary: "Obter perfil do usuário",
+        tags: ["Auth API"],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { "$ref": "#/components/schemas/LoginRequest" }
+            }
+          }
+        },
+        responses: {
+          "200": {
+            description: "Perfil obtido com sucesso",
+            content: {
+              "application/json": {
+                schema: { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "401": { description: "Token inválido" },
+          "404": { description: "Usuário não encontrado" }
+        }
+      }
+    },
+    "/api/auth/update-profile": {
+      put: {
+        summary: "Atualizar perfil do usuário",
+        tags: ["Auth API"],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["idToken"],
+                properties: {
+                  idToken: { type: "string" },
+                  nome: { type: "string" },
+                  telefone: { type: "string" },
+                  curso: { type: "string" }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          "200": {
+            description: "Perfil atualizado com sucesso",
+            content: {
+              "application/json": {
+                schema: { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "400": { description: "Dados inválidos" },
+          "401": { description: "Token inválido" }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      post: {
+        summary: "Logout do usuário",
+        tags: ["Auth API"],
+        responses: {
+          "200": { description: "Logout realizado com sucesso" }
         }
       }
     },

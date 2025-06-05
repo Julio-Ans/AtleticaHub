@@ -1,6 +1,5 @@
 const admin = require('../config/firebaseAdmin');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const userRepository = require('../repositories/userRepository');
 
 async function verificarToken(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -17,10 +16,8 @@ async function verificarToken(req, res, next) {
     // Valida com Firebase Admin
     const decodedToken = await admin.auth().verifyIdToken(token);
 
-    // Busca o usuário completo no PostgreSQL (por UID do Firebase)
-    const usuario = await prisma.usuario.findUnique({
-      where: { id: decodedToken.uid }
-    });
+    // Busca o usuário completo no PostgreSQL usando repository
+    const usuario = await userRepository.findById(decodedToken.uid);
 
     if (!usuario) {
       return res.status(401).json({ error: 'Usuário não encontrado no banco.' });

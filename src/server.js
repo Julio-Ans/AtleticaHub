@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
 const path = require('path');
+const cors = require('cors');
 const swaggerUi = require('swagger-ui-express');
 const swaggerDocument = require('../config/swagger');
 
@@ -12,15 +12,26 @@ const authRoutes = require('./routes/authRoutes');
 const protectedRoutes = require('./routes/protectedRoutes');
 const mensagemRoutes = require('./routes/mensagemRoutes');
 const inscricaoRoutes = require('./routes/inscricaoRoutes');
-const esporteRoutes = require('./routes/esporteRoutes'); // Nova importação
+const esporteRoutes = require('./routes/esporteRoutes');
 const eventRoutes = require('./routes/eventRoutes');
+const apiAuthRoutes = require('./routes/apiAuthRoutes');
+const produtoRoutes = require('./routes/produtoRoutes');
+const cartRoutes = require('./routes/cartRoutes');
+const pedidoRoutes = require('./routes/pedidoRoutes');
 
 const app = express();
-const prisma = new PrismaClient();
 
 connectMongoDB().then(() => {
   console.log('🍃 MongoDB conectado com sucesso!');
 });
+
+// Configuração CORS para permitir acesso da aplicação Next.js
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://localhost:3001', process.env.FRONTEND_URL].filter(Boolean),
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 // Middlewares
 app.use(express.json());
@@ -38,6 +49,15 @@ app.get('/config/firebase', (req, res) => {
     console.error('Erro ao enviar config Firebase:', err);
     res.status(500).json({ error: 'Erro interno ao carregar config.' });
   }
+});
+
+// Rota para testar se o CORS está funcionando corretamente
+app.get('/api/cors-test', (req, res) => {
+  res.json({
+    message: 'Conexão CORS bem-sucedida!',
+    origin: req.headers.origin || 'Origem não detectada',
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Auth + Protected Routes
@@ -64,77 +84,17 @@ app.get('/user-dashboard', (req, res) => {
 });
 
 // 🏆 API Routes
-app.use('/api/esportes', esporteRoutes);        // Nova rota de Esportes
-app.use('/api/inscricoes', inscricaoRoutes);    // Rota existente
-app.use('/api/mensagens', mensagemRoutes);      // Rota existente
-app.use('/api/eventos', eventRoutes);          // Nova rota de Eventos
+app.use('/api/auth', apiAuthRoutes);
+app.use('/api/esportes', esporteRoutes);
+app.use('/api/inscricoes', inscricaoRoutes);
+app.use('/api/mensagens', mensagemRoutes);
+app.use('/api/eventos', eventRoutes);
+app.use('/api/produtos', produtoRoutes);
+app.use('/api/cart', cartRoutes);
+app.use('/api/pedidos', pedidoRoutes);
 
 // 📚 Swagger Docs
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
-
-// 🛒 Produtos
-app.post('/api/produtos', async (req, res, next) => {
-  try {
-    const { nome, descricao, preco, estoque } = req.body;
-    const produto = await prisma.produto.create({ data: { nome, descricao, preco, estoque } });
-    res.status(201).json(produto);
-  } catch (err) {
-    next(err);
-  }
-});
-
-app.get('/api/produtos', async (req, res, next) => {
-  try {
-    const produtos = await prisma.produto.findMany();
-    res.json(produtos);
-  } catch (err) {
-    next(err);
-  }
-});
-
-// 🛍 Carrinho
-app.post('/api/cart', async (req, res, next) => {
-  try {
-    const { studentEmail, produtoId, quantidade } = req.body;
-    const cartItem = await prisma.cartItem.create({ data: { studentEmail, produtoId, quantidade } });
-    res.status(201).json(cartItem);
-  } catch (err) {
-    next(err);
-  }
-});
-
-app.get('/api/cart', async (req, res, next) => {
-  try {
-    const { studentEmail } = req.query;
-    if (!studentEmail) return res.status(400).json({ error: 'studentEmail é obrigatório' });
-    const items = await prisma.cartItem.findMany({ where: { studentEmail }, include: { produto: true } });
-    res.json(items);
-  } catch (err) {
-    next(err);
-  }
-});
-
-// 📦 Pedidos
-app.get('/api/pedidos', async (req, res, next) => {
-  try {
-    const { studentEmail } = req.query;
-    if (!studentEmail) return res.status(400).json({ error: 'studentEmail é obrigatório' });
-    const pedidos = await prisma.pedido.findMany({ where: { studentEmail } });
-    res.json(pedidos);
-  } catch (err) {
-    next(err);
-  }
-});
-
-app.post('/api/pedidos/:id/payment', async (req, res, next) => {
-  try {
-    const id = Number(req.params.id);
-    const pedido = await prisma.pedido.update({ where: { id }, data: { status: 'pago' } });
-    res.json({ message: 'Pagamento processado', pedido });
-  } catch (err) {
-    next(err);
-  }
-});
 
 // 🧯 Global error handler
 app.use((err, req, res, next) => {

@@ -1,26 +1,38 @@
-import { PrismaClient } from '@prisma/client';
+const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-export function add(data) { return prisma.cartItem.create({ data }); }
-export function findByEmail(email) {
-    return prisma.cartItem.findMany({
+class CartItemRepository {
+  async add(data) { 
+    return await prisma.cartItem.create({ data }); 
+  }
+
+  async findByEmail(email) {
+    return await prisma.cartItem.findMany({
         where: { studentEmail: email },
         include: { produto: true },
     });
-}
-export function findById(id) {
-    return prisma.cartItem.findUnique({
+  }
+
+  async findById(id) {
+    return await prisma.cartItem.findUnique({
         where: { id },
         include: { produto: true },
     });
-}
-export function updateQty(id, quantidade) {
-    return prisma.cartItem.update({
+  }
+
+  async updateQty(id, quantidade) {
+    return await prisma.cartItem.update({
         where: { id },
         data: { quantidade },
     });
+  }
+
+  async remove(id) { 
+    return await prisma.cartItem.delete({ where: { id } }); 
+  }
+  async clearCart(email) {
+    return await prisma.cartItem.deleteMany({ where: { studentEmail: email } });
+  }
 }
-export function remove(id) { return prisma.cartItem.delete({ where: { id } }); }
-export function clearByEmail(email) {
-    return prisma.cartItem.deleteMany({ where: { studentEmail: email } });
-}
+
+module.exports = new CartItemRepository();

@@ -1,115 +1,107 @@
-const Mensagem = require('../models/mensagem.model');
+const mensagemRepository = require('../repositories/mensagemRepository');
 
 async function criarMensagem({ conteudo, usuarioId, usuarioNome, esporteId }) {
-  return await Mensagem.create({ conteudo, usuarioId, usuarioNome, esporteId });
+  try {
+    // Validações de negócio
+    if (!conteudo || conteudo.trim() === '') {
+      throw new Error('Conteúdo da mensagem é obrigatório');
+    }
+
+    if (!usuarioId || !usuarioNome || !esporteId) {
+      throw new Error('Dados do usuário e esporte são obrigatórios');
+    }
+
+    const mensagemData = {
+      conteudo: conteudo.trim(),
+      usuarioId,
+      usuarioNome,
+      esporteId
+    };
+
+    return await mensagemRepository.create(mensagemData);
+  } catch (error) {
+    console.error('Erro ao criar mensagem:', error);
+    throw error;
+  }
 }
 
 async function listarMensagens(esporteId) {
-  return await Mensagem.find({ esporteId }).sort({ fixada: -1, criadaEm: 1 });
+  try {
+    if (!esporteId) {
+      throw new Error('ID do esporte é obrigatório');
+    }
+
+    return await mensagemRepository.findBySport(esporteId);
+  } catch (error) {
+    console.error('Erro ao listar mensagens:', error);
+    throw new Error('Falha ao listar mensagens');
+  }
 }
 
 async function editarMensagem(id, usuarioId, conteudo) {
-  const msg = await Mensagem.findById(id);
-  if (!msg || msg.usuarioId !== usuarioId) throw new Error('Permissão negada');
-  msg.conteudo = conteudo;
-  msg.editadaEm = new Date();
-  return await msg.save();
+  try {
+    if (!conteudo || conteudo.trim() === '') {
+      throw new Error('Conteúdo da mensagem é obrigatório');
+    }
+
+    const mensagem = await mensagemRepository.findById(id);
+    if (!mensagem) {
+      throw new Error('Mensagem não encontrada');
+    }
+
+    // Verificar se o usuário é o autor da mensagem
+    if (mensagem.usuarioId !== usuarioId) {
+      throw new Error('Você só pode editar suas próprias mensagens');
+    }
+
+    return await mensagemRepository.update(id, { 
+      conteudo: conteudo.trim() 
+    });
+  } catch (error) {
+    console.error('Erro ao editar mensagem:', error);
+    throw error;
+  }
 }
 
 async function excluirMensagem(id, usuarioId, isAdmin) {
   try {
-    console.log("Função excluirMensagem iniciada");
-    console.log("ID da mensagem:", id);
-    console.log("ID do usuário:", usuarioId);
-    console.log("É admin:", isAdmin);
-
-    // Validar ID da mensagem
     if (!id) {
-      throw new Error(`ID da mensagem inválido: ${id}`);
+      throw new Error('ID da mensagem é obrigatório');
     }
-    
-    // Tenta converter para ObjectId válido se for string
-    const mongoose = require('mongoose');
-    let objectId;
-    
-    try {
-      // Tenta usar o id diretamente ou converter para ObjectId se for string
-      objectId = typeof id === 'string' ? new mongoose.Types.ObjectId(id) : id;
-      console.log("ObjectId gerado:", objectId);
-    } catch (err) {
-      console.error("Erro ao converter para ObjectId:", err);
-      throw new Error(`ID da mensagem inválido: ${id}. Erro: ${err.message}`);
-    }
-    
-    // Buscar mensagem - usando findOne para maior flexibilidade com IDs
-    const mensagem = await Mensagem.findOne({
-      $or: [
-        { _id: objectId },
-        { _id: id.toString() }
-      ]
-    });
-    
-    console.log("Mensagem encontrada:", mensagem ? "Sim" : "Não");
 
+    const mensagem = await mensagemRepository.findById(id);
     if (!mensagem) {
-      throw new Error('Mensagem não encontrada.');
+      throw new Error('Mensagem não encontrada');
     }
 
-    console.log("ID do autor da mensagem:", mensagem.usuarioId);
-    
     // Verificar se é o autor ou admin
     if (mensagem.usuarioId !== usuarioId && !isAdmin) {
-      throw new Error('Você não tem permissão para excluir esta mensagem.');
+      throw new Error('Você não tem permissão para excluir esta mensagem');
     }
 
-    // Excluir mensagem - usando deleteOne para evitar problemas com o formato do ID
-    console.log("Excluindo mensagem com ID:", id);
-    const resultado = await Mensagem.deleteOne({ _id: mensagem._id });
-    console.log("Resultado da exclusão:", resultado);
-    
+    await mensagemRepository.delete(id);
     return true;
-  } catch (err) {
-    console.error('Erro ao excluir mensagem:', err);
-    throw new Error(`Falha ao excluir mensagem: ${err.message}`);
+  } catch (error) {
+    console.error('Erro ao excluir mensagem:', error);
+    throw error;
   }
 }
 
 async function fixarMensagem(id, fixar) {
   try {
-    console.log("Função fixarMensagem iniciada");
-    console.log("ID da mensagem:", id);
-    console.log("Fixar:", fixar);
-    
     if (!id) {
-      throw new Error(`ID da mensagem inválido: ${id}`);
+      throw new Error('ID da mensagem é obrigatório');
     }
-    
-    // Tenta converter para ObjectId válido se for string
-    const mongoose = require('mongoose');
-    let objectId;
-    
-    try {
-      // Tenta usar o id diretamente ou converter para ObjectId se for string
-      objectId = typeof id === 'string' ? new mongoose.Types.ObjectId(id) : id;
-      console.log("ObjectId gerado:", objectId);
-    } catch (err) {
-      console.error("Erro ao converter para ObjectId:", err);
-      throw new Error(`ID da mensagem inválido: ${id}. Erro: ${err.message}`);
+
+    const mensagem = await mensagemRepository.findById(id);
+    if (!mensagem) {
+      throw new Error('Mensagem não encontrada');
     }
-    
-    // Usando updateOne para maior compatibilidade com diferentes formatos de ID
-    const resultado = await Mensagem.findOneAndUpdate(
-      { _id: objectId },
-      { fixada: fixar },
-      { new: true }
-    );
-    
-    console.log("Resultado da operação fixar:", resultado ? "Sucesso" : "Falha");
-    
-    return resultado;
-  } catch (err) {
-    console.error("Erro ao fixar/desfixar mensagem:", err);
-    throw new Error(`Falha ao atualizar status da mensagem: ${err.message}`);
+
+    return await mensagemRepository.updatePinStatus(id, fixar);
+  } catch (error) {
+    console.error('Erro ao fixar/desfixar mensagem:', error);
+    throw error;
   }
 }
 

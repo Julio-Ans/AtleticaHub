@@ -1,10 +1,8 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const esporteRepository = require('../repositories/esporteRepository');
 
-module.exports = {
-  async listarEsportes() {
+module.exports = {  async listarEsportes() {
     try {
-      const esportes = await prisma.esporte.findMany();
+      const esportes = await esporteRepository.findAll();
       
       // Adicionar o esporte "Geral" se não existir no banco
       const temGeral = esportes.some(e => e.id === "0");
@@ -25,19 +23,14 @@ module.exports = {
       if (!nome || nome.trim() === '') {
         throw new Error('Nome do esporte é obrigatório');
       }
-      
-      // Verificar se já existe
-      const esporteExistente = await prisma.esporte.findFirst({
-        where: { nome: { equals: nome, mode: 'insensitive' } }
-      });
+        // Verificar se já existe
+      const esporteExistente = await esporteRepository.findByName(nome);
       
       if (esporteExistente) {
         throw new Error('Já existe um esporte com este nome');
       }
       
-      return await prisma.esporte.create({
-        data: { nome }
-      });
+      return await esporteRepository.create({ nome });
     } catch (error) {
       console.error('Erro ao criar esporte:', error);
       throw error;
@@ -50,32 +43,21 @@ module.exports = {
       if (!nome || nome.trim() === '') {
         throw new Error('Nome do esporte é obrigatório');
       }
-      
-      // Verificar se o esporte existe
-      const esporte = await prisma.esporte.findUnique({
-        where: { id: String(id) }
-      });
+        // Verificar se o esporte existe
+      const esporte = await esporteRepository.findById(id);
       
       if (!esporte) {
         throw new Error('Esporte não encontrado');
       }
       
       // Verificar se o novo nome já existe em outro esporte
-      const esporteExistente = await prisma.esporte.findFirst({
-        where: { 
-          nome: { equals: nome, mode: 'insensitive' },
-          id: { not: String(id) }
-        }
-      });
+      const esporteExistente = await esporteRepository.findByName(nome);
       
-      if (esporteExistente) {
+      if (esporteExistente && esporteExistente.id !== String(id)) {
         throw new Error('Já existe outro esporte com este nome');
       }
       
-      return await prisma.esporte.update({
-        where: { id: String(id) },
-        data: { nome }
-      });
+      return await esporteRepository.update(id, { nome });
     } catch (error) {
       console.error('Erro ao atualizar esporte:', error);
       throw error;
@@ -88,19 +70,13 @@ module.exports = {
       if (id === "0") {
         throw new Error('O esporte Geral não pode ser excluído');
       }
+        // Verificar se existem inscrições para este esporte
+      const numeroInscricoes = await esporteRepository.countInscricoes(id);
       
-      // Verificar se existem inscrições para este esporte
-      const inscricoes = await prisma.inscricao.findFirst({
-        where: { esporteId: String(id) }
-      });
-      
-      if (inscricoes) {
+      if (numeroInscricoes > 0) {
         throw new Error('Não é possível excluir um esporte com inscrições ativas');
       }
-      
-      return await prisma.esporte.delete({
-        where: { id: String(id) }
-      });
+        return await esporteRepository.delete(id);
     } catch (error) {
       console.error('Erro ao excluir esporte:', error);
       throw error;

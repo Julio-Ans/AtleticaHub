@@ -1,5 +1,5 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const inscricaoRepository = require('../repositories/inscricaoRepository');
+const esporteRepository = require('../repositories/esporteRepository');
 
 module.exports = {
   async criarInscricao(usuarioId, esporteId) {
@@ -10,36 +10,32 @@ module.exports = {
       }
       
       // Verificar se o esporte existe
-      const esporte = await prisma.esporte.findUnique({
-        where: { id: String(esporteId) }
-      });
-      
+      const esporte = await esporteRepository.findById(String(esporteId));
       if (!esporte) {
         throw new Error('Esporte não encontrado');
       }
-      
-      // Verificar se já existe inscrição
-      const inscricaoExistente = await prisma.inscricao.findFirst({
-        where: {
-          usuarioId,
-          esporteId: String(esporteId)
-        }
-      });
+        // Verificar se já existe inscrição
+      const inscricaoExistente = await inscricaoRepository.findByUserAndSport(
+        usuarioId, 
+        String(esporteId)
+      );
       
       if (inscricaoExistente) {
         if (inscricaoExistente.status === 'aceito') {
           throw new Error('Você já está inscrito neste esporte');
         } else if (inscricaoExistente.status === 'pendente') {
-          throw new Error('Sua inscrição está pendente de aprovação');
+          // Retornar a inscrição existente em vez de lançar um erro
+          return inscricaoExistente;
+        } else if (inscricaoExistente.status === 'recusado') {
+          // Atualizar status para pendente se foi recusada anteriormente
+          return await inscricaoRepository.update(inscricaoExistente.id, { status: 'pendente' });
         }
       }
       
-      return await prisma.inscricao.create({
-        data: {
-          usuarioId,
-          esporteId: String(esporteId),
-          status: 'pendente'
-        }
+      return await inscricaoRepository.create({
+        usuarioId,
+        esporteId: String(esporteId),
+        status: 'pendente'
       });
     } catch (error) {
       console.error('Erro ao criar inscrição:', error);
@@ -49,15 +45,7 @@ module.exports = {
   
   async listarPendentes(esporteId) {
     try {
-      return await prisma.inscricao.findMany({
-        where: {
-          esporteId: String(esporteId),
-          status: 'pendente'
-        },
-        include: {
-          usuario: true
-        }
-      });
+      return await inscricaoRepository.findPendingBySport(String(esporteId));
     } catch (error) {
       console.error('Erro ao listar inscrições pendentes:', error);
       throw new Error('Falha ao listar inscrições pendentes');
@@ -72,18 +60,12 @@ module.exports = {
       }
       
       // Verificar se a inscrição existe
-      const inscricao = await prisma.inscricao.findUnique({
-        where: { id }
-      });
-      
+      const inscricao = await inscricaoRepository.findById(id);
       if (!inscricao) {
         throw new Error('Inscrição não encontrada');
       }
       
-      return await prisma.inscricao.update({
-        where: { id },
-        data: { status }
-      });
+      return await inscricaoRepository.updateStatus(id, status);
     } catch (error) {
       console.error('Erro ao atualizar status da inscrição:', error);
       throw error;
@@ -92,10 +74,7 @@ module.exports = {
 
   async listarPorUsuario(usuarioId) {
     try {
-      return await prisma.inscricao.findMany({
-        where: { usuarioId },
-        orderBy: { criadaEm: 'desc' }
-      });
+      return await inscricaoRepository.findByUser(usuarioId);
     } catch (error) {
       console.error('Erro ao listar inscrições do usuário:', error);
       throw new Error('Falha ao listar suas inscrições');

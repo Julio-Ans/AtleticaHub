@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const userRepository = require('../repositories/userRepository');
 
 // Middleware: Verifica papel do usuário consultando o banco pelo UID
 function checkRole(requiredRole) {
@@ -9,10 +8,8 @@ function checkRole(requiredRole) {
         return res.status(401).json({ error: 'Usuário não autenticado' });
       }
 
-      // Busca usuário pelo UID do Firebase (que é o campo `id` no Prisma)
-      const usuario = await prisma.usuario.findUnique({
-        where: { id: req.user.uid }
-      });
+      // Busca usuário pelo UID do Firebase usando o repository
+      const usuario = await userRepository.findById(req.user.uid);
 
       if (!usuario) {
         return res.status(404).json({ error: 'Usuário não encontrado' });
