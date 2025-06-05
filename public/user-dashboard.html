@@ -302,24 +302,13 @@
     </header>
     
     <div class="tabs">
-      <div class="tab active" onclick="changeTab('esportes')">Meus Esportes</div>
-      <div class="tab" onclick="changeTab('mensagens')">Mensagens</div>
-      <div class="tab" onclick="changeTab('perfil')">Meu Perfil</div>
-    </div>
-    
-    <!-- Tab Esportes -->
-    <div id="esportesTab" class="tab-content active">
-      <h2>Esportes Disponíveis</h2>
-      <div id="esportesAlert"></div>
-      <div id="esportesContainer" class="loading">Carregando esportes...</div>
-      
-      <h3 style="margin-top: 30px;">Minhas Inscrições</h3>
-      <div id="minhasInscricoesAlert"></div>
-      <div id="minhasInscricoesContainer" class="loading">Carregando inscrições...</div>
+      <div class="tab active" onclick="changeTab('mensagens')">Mensagens</div>
+      <div class="tab" onclick="changeTab('esportes')">Esportes</div>
+      <div class="tab" onclick="changeTab('eventos')">Eventos</div>
     </div>
     
     <!-- Tab Mensagens -->
-    <div id="mensagensTab" class="tab-content">
+    <div id="mensagensTab" class="tab-content active">
       <h2>Mensagens</h2>
       <select id="esporteMensagens" class="esporte-selector" onchange="carregarMensagens(this.value)">
         <option value="0">Geral</option>
@@ -333,6 +322,25 @@
         <h3>Nova Mensagem</h3>
         <textarea id="novaMensagem" placeholder="Digite sua mensagem aqui..."></textarea>
         <button class="primary" onclick="enviarMensagem()">Enviar</button>
+      </div>
+    </div>
+    
+    <!-- Tab Esportes -->
+    <div id="esportesTab" class="tab-content">
+      <h2>Esportes Disponíveis</h2>
+      <div id="esportesAlert"></div>
+      <div id="esportesContainer" class="loading">Carregando esportes...</div>
+      
+      <h3 style="margin-top: 30px;">Minhas Inscrições</h3>
+      <div id="minhasInscricoesAlert"></div>
+      <div id="minhasInscricoesContainer" class="loading">Carregando inscrições...</div>
+    </div>
+    
+    <!-- Tab Eventos -->
+    <div id="eventosTab" style="display:none">
+      <h2>Eventos</h2>
+      <div id="listaEventosUsuario">
+        <p>Carregando eventos...</p>
       </div>
     </div>
     
@@ -380,7 +388,8 @@
           await Promise.all([
             carregarEsportes(),
             carregarMinhasInscricoes(),
-            carregarMensagens(esporteGeralId)
+            carregarMensagens(esporteGeralId),
+            carregarEventosUsuario()
           ]);
           
           // Exibir informações do usuário
@@ -441,6 +450,9 @@
       // Adicionar classe ativa à aba selecionada
       document.querySelector(`.tab[onclick="changeTab('${tab}')"]`).classList.add('active');
       document.getElementById(`${tab}Tab`).classList.add('active');
+      
+      // Esconder/mostrar eventosTab
+      document.getElementById('eventosTab').style.display = tab === 'eventos' ? 'block' : 'none';
       
       currentTab = tab;
     }
@@ -659,6 +671,65 @@
       }
     }
     
+    // Carregar eventos do usuário
+    async function carregarEventosUsuario() {
+      try {
+        const token = await firebaseUser.getIdToken();
+        const res = await fetch('/api/eventos', { headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) throw new Error('Erro ao carregar eventos');
+        const eventos = await res.json();
+        const lista = document.getElementById('listaEventosUsuario');
+        if (!eventos.length) {
+          lista.innerHTML = '<p>Nenhum evento disponível.</p>';
+          return;
+        }
+        lista.innerHTML = '';
+        eventos.forEach(ev => {
+          const inscrito = (ev.inscricoes||[]).some(i => i.usuarioId === firebaseUser.uid);
+          const div = document.createElement('div');
+          div.className = 'card';
+          div.innerHTML = `
+            <h3>${ev.titulo}</h3>
+            <p><b>Tipo:</b> ${ev.tipo} | <b>Data:</b> ${new Date(ev.data).toLocaleString()} | <b>Local:</b> ${ev.local}</p>
+            <p>${ev.descricao || ''}</p>
+            <button onclick="${inscrito ? `cancelarInscricaoEvento('${ev._id}')` : `inscreverEvento('${ev._id}')`}">
+              ${inscrito ? 'Cancelar inscrição' : 'Inscrever-se'}
+            </button>
+          `;
+          lista.appendChild(div);
+        });
+      } catch (err) {
+        document.getElementById('listaEventosUsuario').innerHTML = '<p>Erro ao carregar eventos.</p>';
+      }
+    }
+    
+    // Inscrever em evento
+    async function inscreverEvento(id) {
+      try {
+        const token = await firebaseUser.getIdToken();
+        const res = await fetch(`/api/eventos/${id}/inscrever`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) throw new Error('Erro ao inscrever no evento');
+        alert('Inscrição realizada!');
+        await carregarEventosUsuario();
+      } catch (err) {
+        alert('Erro ao inscrever no evento.');
+      }
+    }
+    
+    // Cancelar inscrição em evento
+    async function cancelarInscricaoEvento(id) {
+      if (!confirm('Cancelar sua inscrição neste evento?')) return;
+      try {
+        const token = await firebaseUser.getIdToken();
+        const res = await fetch(`/api/eventos/${id}/inscrever`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) throw new Error('Erro ao cancelar inscrição');
+        alert('Inscrição cancelada!');
+        await carregarEventosUsuario();
+      } catch (err) {
+        alert('Erro ao cancelar inscrição.');
+      }
+    }
+    
     // Exibir alertas
     function showAlert(containerId, message, type) {
       const container = document.getElementById(containerId);
@@ -679,6 +750,14 @@
         alert('Erro ao fazer logout. Por favor, tente novamente.');
       });
     }
+    
+    // Chamar carregarEventosUsuario ao iniciar
+    main = (function(origMain){
+      return async function() {
+        await origMain();
+        await carregarEventosUsuario();
+      }
+    })(main);
     
     // Iniciar a aplicação
     main();

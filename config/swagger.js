@@ -120,6 +120,33 @@ module.exports = {
         properties: {
           error: { type: "string" }
         }
+      },
+      Evento: {
+        type: "object",
+        properties: {
+          _id: { type: "string" },
+          titulo: { type: "string" },
+          descricao: { type: "string" },
+          tipo: { type: "string" },
+          data: { type: "string", format: "date-time" },
+          local: { type: "string" },
+          criadoEm: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+          criadorId: { type: "string" },
+          inscricoes: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                usuarioId: { type: "string" },
+                nome: { type: "string" },
+                email: { type: "string" },
+                dataInscricao: { type: "string", format: "date-time" }
+              }
+            }
+          }
+        },
+        required: ["titulo", "tipo", "data", "local", "criadorId"]
       }
     }
   },
@@ -975,7 +1002,156 @@ module.exports = {
           "404": { description: "Pedido não encontrado" }
         }
       }
-    }
+    },
+    // Eventos
+    "/api/eventos": {
+      get: {
+        summary: "Listar todos os eventos",
+        responses: {
+          "200": {
+            description: "Lista de eventos",
+            content: {
+              "application/json": {
+                schema: { type: "array", items: { $ref: "#/components/schemas/Evento" } }
+              }
+            }
+          }
+        }
+      },
+      post: {
+        summary: "Criar evento (admin)",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  titulo: { type: "string" },
+                  descricao: { type: "string" },
+                  tipo: { type: "string" },
+                  data: { type: "string", format: "date-time" },
+                  local: { type: "string" }
+                },
+                required: ["titulo", "tipo", "data", "local"]
+              }
+            }
+          }
+        },
+        responses: {
+          "201": {
+            description: "Evento criado",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/Evento" }
+              }
+            }
+          },
+          "400": { description: "Erro ao criar evento" }
+        }
+      }
+    },
+    "/api/eventos/{id}": {
+      get: {
+        summary: "Buscar evento por ID",
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string" } }
+        ],
+        responses: {
+          "200": {
+            description: "Evento encontrado",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/Evento" }
+              }
+            }
+          },
+          "404": { description: "Evento não encontrado" }
+        }
+      },
+      put: {
+        summary: "Editar evento (admin)",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string" } }
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  titulo: { type: "string" },
+                  descricao: { type: "string" },
+                  tipo: { type: "string" },
+                  data: { type: "string", format: "date-time" },
+                  local: { type: "string" }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          "200": { description: "Evento atualizado", content: { "application/json": { schema: { $ref: "#/components/schemas/Evento" } } } },
+          "400": { description: "Erro ao editar evento" },
+          "404": { description: "Evento não encontrado" }
+        }
+      },
+      delete: {
+        summary: "Excluir evento (admin)",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string" } }
+        ],
+        responses: {
+          "200": { description: "Evento excluído", content: { "application/json": { schema: { type: "object", properties: { message: { type: "string" } } } } } },
+          "404": { description: "Evento não encontrado" }
+        }
+      }
+    },
+    "/api/eventos/{id}/inscrever": {
+      post: {
+        summary: "Inscrever usuário no evento",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string" } }
+        ],
+        responses: {
+          "201": { description: "Inscrição realizada com sucesso" },
+          "400": { description: "Erro ao inscrever ou já inscrito" },
+          "404": { description: "Evento não encontrado" }
+        }
+      },
+      delete: {
+        summary: "Cancelar inscrição do usuário no evento",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string" } }
+        ],
+        responses: {
+          "200": { description: "Inscrição cancelada com sucesso" },
+          "404": { description: "Inscrição não encontrada ou evento não encontrado" }
+        }
+      }
+    },
+    "/api/eventos/minhas/inscricoes": {
+      get: {
+        summary: "Listar eventos em que o usuário está inscrito",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "200": {
+            description: "Lista de eventos inscritos",
+            content: {
+              "application/json": {
+                schema: { type: "array", items: { $ref: "#/components/schemas/Evento" } }
+              }
+            }
+          }
+        }
+      }
+    },
   },
   security: [
     { bearerAuth: [] }

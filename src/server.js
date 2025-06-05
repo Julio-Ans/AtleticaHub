@@ -13,6 +13,7 @@ const protectedRoutes = require('./routes/protectedRoutes');
 const mensagemRoutes = require('./routes/mensagemRoutes');
 const inscricaoRoutes = require('./routes/inscricaoRoutes');
 const esporteRoutes = require('./routes/esporteRoutes'); // Nova importação
+const eventRoutes = require('./routes/eventRoutes');
 
 const app = express();
 const prisma = new PrismaClient();
@@ -25,6 +26,9 @@ connectMongoDB().then(() => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
+
+// Servir arquivos de upload de imagens de eventos
+app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
 // Firebase Config para frontend
 app.get('/config/firebase', (req, res) => {
@@ -63,6 +67,7 @@ app.get('/user-dashboard', (req, res) => {
 app.use('/api/esportes', esporteRoutes);        // Nova rota de Esportes
 app.use('/api/inscricoes', inscricaoRoutes);    // Rota existente
 app.use('/api/mensagens', mensagemRoutes);      // Rota existente
+app.use('/api/eventos', eventRoutes);          // Nova rota de Eventos
 
 // 📚 Swagger Docs
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
