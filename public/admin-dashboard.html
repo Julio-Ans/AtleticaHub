@@ -845,6 +845,7 @@
           div.className = 'card';
           div.innerHTML = `
             <h3>${ev.titulo}</h3>
+            ${ev.fotoUrl ? `<img src="${ev.fotoUrl}" alt="Foto do evento" style="max-width:200px;max-height:150px;display:block;margin-bottom:10px;">` : ''}
             <p><b>Tipo:</b> ${ev.tipo} | <b>Data:</b> ${new Date(ev.data).toLocaleString()} | <b>Local:</b> ${ev.local}</p>
             <p>${ev.descricao || ''}</p>
             <button onclick="editarEvento('${ev._id}')">Editar</button>
@@ -872,38 +873,23 @@
         if (!titulo || !tipo || !data || !local) {
           return alert('Preencha todos os campos obrigatórios!');
         }
-        
         const token = await firebaseUser.getIdToken();
-        
-        // Criar o evento sem a foto primeiro
+        const formData = new FormData();
+        formData.append('titulo', titulo);
+        formData.append('descricao', descricao);
+        formData.append('tipo', tipo);
+        formData.append('data', data);
+        formData.append('local', local);
+        if (foto) {
+          formData.append('foto', foto);
+        }
         const res = await fetch('/api/eventos', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ titulo, descricao, tipo, data, local })
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData
         });
-        
         if (!res.ok) {
           throw new Error('Erro ao criar evento');
-        }
-        
-        const eventoCriado = await res.json();
-        
-        // Se uma foto foi selecionada, fazer o upload
-        if (foto) {
-          const formData = new FormData();
-          formData.append('foto', foto);
-          
-          const resUpload = await fetch(`/api/eventos/${eventoCriado._id}/foto`, {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${token}`
-            },
-            body: formData
-          });
-          
-          if (!resUpload.ok) {
-            throw new Error('Erro ao fazer upload da foto');
-          }
         }
         
         alert('Evento criado!');

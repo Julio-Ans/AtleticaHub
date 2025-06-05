@@ -690,6 +690,7 @@
           div.className = 'card';
           div.innerHTML = `
             <h3>${ev.titulo}</h3>
+            ${ev.fotoUrl ? `<img src="${ev.fotoUrl}" alt="Foto do evento" style="max-width:200px;max-height:150px;display:block;margin-bottom:10px;">` : ''}
             <p><b>Tipo:</b> ${ev.tipo} | <b>Data:</b> ${new Date(ev.data).toLocaleString()} | <b>Local:</b> ${ev.local}</p>
             <p>${ev.descricao || ''}</p>
             <button onclick="${inscrito ? `cancelarInscricaoEvento('${ev._id}')` : `inscreverEvento('${ev._id}')`}">
