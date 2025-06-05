@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cadastrar Produto</title>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-auth-compat.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      padding: 30px;
+    }
+
+    .container {
+      background-color: #fff;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: bold;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 16px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      background-color: #007bff;
+      color: #fff;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      width: 100%;
+      font-size: 16px;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    .alert {
+      padding: 10px;
+      margin-bottom: 15px;
+      border-radius: 4px;
+      display: none;
+    }
+
+    .alert-error {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+
+    .alert-success {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Cadastrar Produto</h2>
+
+    <div id="alerta" class="alert"></div>
+
+    <form id="formCadastrarProduto" enctype="multipart/form-data">
+      <label for="nome">Nome do Produto</label>
+      <input type="text" id="nome" name="nome" required />
+
+      <label for="descricao">Descrição</label>
+      <textarea id="descricao" name="descricao" required></textarea>
+
+      <label for="preco">Preço (R$)</label>
+      <input type="number" step="0.01" id="preco" name="preco" required />
+
+      <label for="estoque">Estoque</label>
+      <input type="number" id="estoque" name="estoque" required />
+
+      <label for="imagem">Imagem</label>
+      <input type="file" id="imagem" name="imagem" accept="image/*" required />
+
+      <button type="submit">Cadastrar Produto</button>
+    </form>
+  </div>
+
+  <script>
+    async function bootstrap() {
+      try {
+        const resp = await fetch('/config/firebase');
+        const cfg = await resp.json();
+        firebase.initializeApp(cfg);
+
+        const auth = firebase.auth();
+        const form = document.getElementById('formCadastrarProduto');
+        const alerta = document.getElementById('alerta');
+
+        form.addEventListener('submit', async function (e) {
+          e.preventDefault();
+          alerta.style.display = 'none';
+          alerta.className = 'alert';
+
+          try {
+            const token = await auth.currentUser.getIdToken();
+
+            const formData = new FormData(form);
+
+            const res = await fetch('/api/produtos', {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${token}`
+              },
+              body: formData
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+              throw new Error(data.error || 'Erro ao cadastrar o produto');
+            }
+
+            alerta.textContent = 'Produto cadastrado com sucesso!';
+            alerta.classList.add('alert-success');
+            alerta.style.display = 'block';
+            form.reset();
+          } catch (err) {
+            alerta.textContent = err.message;
+            alerta.classList.add('alert-error');
+            alerta.style.display = 'block';
+          }
+        });
+      } catch (err) {
+        console.error('Erro ao inicializar Firebase:', err);
+        alert('Erro ao carregar a página. Tente novamente.');
+      }
+    }
+
+    bootstrap();
+  </script>
+</body>
+</html>

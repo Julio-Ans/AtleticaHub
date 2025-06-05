@@ -6,7 +6,7 @@ const authService = require('../services/authService');
 const adminService = require('../services/adminService');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
-const admin = require('../config/firebaseAdmin');
+const {admin} = require('../config/firebaseAdmin');
 
 // Atualizar o endpoint de login
 router.post('/login', async (req, res) => {

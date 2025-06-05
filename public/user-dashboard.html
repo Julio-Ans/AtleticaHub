@@ -346,6 +346,26 @@
     </div>
   </div>
 
+  <!-- Tab fazer compra -->
+  <h2>Fazer Pedido</h2>
+  <form id="formPedido">
+    <label for="produtoId">ID do Produto:</label>
+    <input type="number" id="produtoId" required>
+    <label for="quantidade">Quantidade:</label>
+    <input type="number" id="quantidade" required>
+    <br><br>
+    <label for="total">Total (R$):</label>
+    <input type="number" id="total" step="0.01" required>
+    <button type="submit">Enviar Pedido</button>
+  </form>
+  <div id="resultadoPedido"></div>
+
+
+  <!-- Tab pedidos -->
+  <h2>Meus Pedidos</h2>
+  <div id="meusPedidos"></div>
+
+
   <script>
     // Constantes
     const esporteGeralId = "0"; // Usando string em vez de número
@@ -679,9 +699,62 @@
         alert('Erro ao fazer logout. Por favor, tente novamente.');
       });
     }
+
+        // Mostrar pedidos
+    async function carregarMeusPedidos() {
+    const token = await firebaseUser.getIdToken();
+
+    const res = await fetch('/api/pedidos/meus', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    const pedidos = await res.json();
+
+    let html = '';
+
+    pedidos.forEach(pedido => {
+      html += `<h3>Pedido #${pedido.id} - Status: ${pedido.status} - Total: R$${pedido.total.toFixed(2)}</h3>`;
+      html += '<ul>';
+      pedido.produtos.forEach(item => {
+        html += `<li>${item.produto.nome} - Quantidade: ${item.quantidade}</li>`;
+      });
+      html += '</ul><hr>';
+    });
+
+    document.getElementById('meusPedidos').innerHTML = html;
+  }
+  carregarMeusPedidos();
+
+  // Fazer pedido
+   document.getElementById('formPedido').addEventListener('submit', async e => {
+    e.preventDefault();
+
+    const token = await firebaseUser.getIdToken();
+    const produtoId = parseInt(document.getElementById('produtoId').value);
+    const quantidade = parseInt(document.getElementById('quantidade').value);
+    const total = parseFloat(document.getElementById('total').value);
+
+    const res = await fetch('/api/pedidos', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        total,
+        itens: [{ produtoId, quantidade }]
+      })
+    });
+
+    const resultado = await res.json();
+    document.getElementById('resultadoPedido').innerText = res.ok
+      ? '✅ Pedido enviado!'
+      : `❌ Erro: ${resultado.error}`;
+  });
     
     // Iniciar a aplicação
     main();
+</script>
   </script>
 </body>
 </html>

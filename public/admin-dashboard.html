@@ -262,6 +262,23 @@
     </div>
   </div>
 
+  <!-- Vendas por produto -->
+  <h2>Relatório de Vendas por Produto</h2>
+  <div id="relatorioVendas"></div>
+
+  <!-- Criar produtos -->
+  <button onclick="window.location.href='/cadastrar-produto.html'">
+  ➕ Cadastrar Novo Produto
+  </button>
+
+  <!-- Listar Produtos -->
+  <button onclick="window.location.href='/listar-produtos.html'">
+  📦 Listar Produtos
+  </button>
+  
+
+
+
   <script>
     const esporteGeralId = "0"; // Número em vez de string
     let firebaseUser;
@@ -806,7 +823,41 @@
       } catch (error) {
         console.error('Erro ao mudar esporte:', error);
       }
-    }    // Iniciar a aplicação
+    }   
+
+    // Vendas por produtos
+    async function carregarVendasAdmin() {
+    const token = await firebaseUser.getIdToken();
+
+    const res = await fetch('/api/pedidos/admin/vendas', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    const produtos = await res.json();
+    let html = '';
+
+    produtos.forEach(prod => {
+      html += `<h3>${prod.nome} - R$${prod.preco.toFixed(2)}</h3>`;
+      html += '<table border="1" cellpadding="6"><thead><tr><th>Pedido</th><th>Qtd</th><th>Data</th><th>Usuário</th></tr></thead><tbody>';
+
+      prod.vendas.forEach(venda => {
+        html += `<tr>
+          <td>${venda.pedidoId}</td>
+          <td>${venda.quantidade}</td>
+          <td>${new Date(venda.dataPedido).toLocaleString()}</td>
+          <td>${venda.usuario?.nome || 'N/A'} (${venda.usuario?.email})</td>
+        </tr>`;
+      });
+
+      html += '</tbody></table><br>';
+    });
+
+    document.getElementById('relatorioVendas').innerHTML = html;
+  }
+
+  carregarVendasAdmin();
+    
+    // Iniciar a aplicação
     main();
   </script>
 </body>

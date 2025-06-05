@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Loja - AtléticaHub</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-auth-compat.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f7f7f7; margin: 0; padding: 30px;}
+    h1 { text-align: center; color: #333; }
+    .produtos { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px; margin-top: 32px;}
+    .produto { background: #fff; border-radius: 8px; box-shadow: 0 1px 5px #0001; padding: 18px; display: flex; flex-direction: column; align-items: center;}
+    .produto img { max-width: 120px; max-height: 120px; margin-bottom: 10px; border-radius: 6px;}
+    .produto h3 { margin: 8px 0 4px 0;}
+    .produto p { color: #444; font-size: 15px; }
+    .produto .preco { font-weight: bold; color: #007bff; font-size: 17px; margin-top: 6px;}
+    .produto button { margin-top: 12px; background: #28a745; color: white; border: none; border-radius: 4px; padding: 7px 18px; cursor: pointer;}
+    .produto button:disabled { background: #ccc; cursor: not-allowed;}
+    .carrinho-link { display: block; text-align: right; margin: 0 0 15px 0; }
+  </style>
+</head>
+<body>
+  <h1>Loja AtléticaHub</h1>
+  <a href="/carrinho.html" class="carrinho-link">Ver Carrinho 🛒</a>
+  <div class="produtos" id="listaProdutos"></div>
+
+  <script>
+    async function bootstrap() {
+      // Firebase config do backend
+      const res = await fetch('/config/firebase');
+      const config = await res.json();
+      firebase.initializeApp(config);
+      const auth = firebase.auth();
+
+      let usuarioLogado = null;
+      let token = null;
+
+      auth.onAuthStateChanged(async (user) => {
+        usuarioLogado = user;
+        token = user ? await user.getIdToken() : null;
+        await carregarProdutos();
+      });
+
+      async function carregarProdutos() {
+        const lista = document.getElementById('listaProdutos');
+        lista.innerHTML = '<div>Carregando...</div>';
+        const res = await fetch('/api/produtos');
+        const produtos = await res.json();
+        lista.innerHTML = '';
+
+        for (const produto of produtos) {
+          const div = document.createElement('div');
+          div.className = 'produto';
+          div.innerHTML = `
+            <img src="${produto.imagemUrl}" alt="${produto.nome}">
+            <h3>${produto.nome}</h3>
+            <p>${produto.descricao}</p>
+            <span class="preco">R$ ${produto.preco.toFixed(2)}</span>
+            <input type="number" min="1" value="1" id="qtd-${produto.id}" style="width: 50px; margin-top:6px;">
+            <button ${usuarioLogado ? '' : 'disabled'} id="btn-${produto.id}">
+              ${usuarioLogado ? 'Adicionar ao carrinho' : 'Faça login para comprar'}
+            </button>
+          `;
+          lista.appendChild(div);
+
+          // Adiciona ao carrinho
+          if (usuarioLogado) {
+            div.querySelector(`#btn-${produto.id}`).onclick = async () => {
+              const quantidade = parseInt(div.querySelector(`#qtd-${produto.id}`).value) || 1;
+              const email = usuarioLogado.email;
+
+              const resp = await fetch('/api/cart', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  studentEmail: email,
+                  produtoId: produto.id,
+                  quantidade
+                })
+              });
+              if (resp.ok) {
+                alert('Produto adicionado ao carrinho!');
+              } else {
+                alert('Erro ao adicionar ao carrinho.');
+              }
+            };
+          }
+        }
+      }
+    }
+    bootstrap();
+  </script>
+</body>
+</html>

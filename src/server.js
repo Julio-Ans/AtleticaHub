@@ -68,35 +68,17 @@ app.use('/api/mensagens', mensagemRoutes);      // Rota existente
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // 🛒 Produtos
-app.post('/api/produtos', async (req, res, next) => {
-  try {
-    const { nome, descricao, preco, estoque } = req.body;
-    const produto = await prisma.produto.create({ data: { nome, descricao, preco, estoque } });
-    res.status(201).json(produto);
-  } catch (err) {
-    next(err);
-  }
-});
-
-app.get('/api/produtos', async (req, res, next) => {
-  try {
-    const produtos = await prisma.produto.findMany();
-    res.json(produtos);
-  } catch (err) {
-    next(err);
-  }
-});
+const produtoRoutes = require('./routes/produtosRoutes');
+app.use('/api/produtos', produtoRoutes);
 
 // 🛍 Carrinho
-app.post('/api/cart', async (req, res, next) => {
-  try {
-    const { studentEmail, produtoId, quantidade } = req.body;
-    const cartItem = await prisma.cartItem.create({ data: { studentEmail, produtoId, quantidade } });
-    res.status(201).json(cartItem);
-  } catch (err) {
-    next(err);
-  }
-});
+const cartRoutes = require('./routes/cartRoutes');
+app.use('/api/cart', cartRoutes);
+
+// Pedidos
+const pedidosRoutes = require('./routes/pedidosRoutes'); // ajuste o caminho se for diferente
+app.use('/api/pedidos', pedidosRoutes);
+
 
 app.get('/api/cart', async (req, res, next) => {
   try {

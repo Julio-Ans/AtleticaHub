@@ -204,6 +204,7 @@
             const password = form.password.value;
             
             // Autenticação no Firebase
+            await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
             const userCredential = await auth.signInWithEmailAndPassword(email, password);
             const idToken = await userCredential.user.getIdToken();
 

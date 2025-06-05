@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Editar Produto</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-auth-compat.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background-color: #f4f4f4;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    form {
+      max-width: 500px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 8px;
+      margin-top: 4px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      margin-top: 15px;
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .logout {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: red;
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .imagem-preview {
+      margin: 12px 0 0 0;
+      text-align: center;
+    }
+    .imagem-preview img {
+      max-width: 180px;
+      max-height: 140px;
+      border-radius: 4px;
+      border: 1px solid #eee;
+    }
+  </style>
+</head>
+<body>
+  <h1>Editar Produto</h1>
+  <button class="logout" onclick="logout()">Sair</button>
+
+  <form id="form-editar-produto" enctype="multipart/form-data">
+    <label for="nome">Nome</label>
+    <input type="text" id="nome" name="nome" required />
+
+    <label for="descricao">Descrição</label>
+    <textarea id="descricao" name="descricao" required></textarea>
+
+    <label for="preco">Preço</label>
+    <input type="number" step="0.01" id="preco" name="preco" required />
+
+    <label for="estoque">Estoque</label>
+    <input type="number" id="estoque" name="estoque" required />
+
+    <label for="imagem">Nova Imagem (opcional)</label>
+    <input type="file" id="imagem" name="imagem" accept="image/*" />
+
+    <div class="imagem-preview">
+      <span>Imagem atual:</span><br>
+      <img id="previewImagem" src="" alt="Imagem Atual do Produto" />
+    </div>
+
+    <button type="submit">Salvar Alterações</button>
+  </form>
+
+  <script>
+    async function bootstrap() {
+      // Busca config do backend para garantir compatibilidade
+      const res = await fetch('/config/firebase');
+      const config = await res.json();
+      firebase.initializeApp(config);
+
+      const auth = firebase.auth();
+
+      window.logout = () => {
+        auth.signOut().then(() => window.location.href = '/login');
+      };
+
+      function getProdutoId() {
+        const params = new URLSearchParams(window.location.search);
+        return params.get('id');
+      }
+
+      async function verificarAdmin(token) {
+        const res = await fetch('/auth/verify-admin', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        return res.ok;
+      }
+
+      async function carregarProduto() {
+        const id = getProdutoId();
+        const res = await fetch(`/api/produtos/${id}`);
+        const produto = await res.json();
+
+        document.getElementById('nome').value = produto.nome;
+        document.getElementById('descricao').value = produto.descricao;
+        document.getElementById('preco').value = produto.preco;
+        document.getElementById('estoque').value = produto.estoque;
+        document.getElementById('previewImagem').src = produto.imagemUrl;
+      }
+
+      // Preview nova imagem
+      document.getElementById('imagem').addEventListener('change', function () {
+        const file = this.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function (e) {
+            document.getElementById('previewImagem').src = e.target.result;
+          };
+          reader.readAsDataURL(file);
+        } else {
+          // Mantém preview da imagem atual
+          carregarProduto();
+        }
+      });
+
+      auth.onAuthStateChanged(async (user) => {
+        if (!user) {
+          alert('Você precisa estar logado como admin para acessar essa página.');
+          window.location.href = '/login';
+          return;
+        }
+
+        const token = await user.getIdToken();
+        const ehAdmin = await verificarAdmin(token);
+
+        if (!ehAdmin) {
+          alert('Você não tem permissão para acessar esta página.');
+          window.location.href = '/login';
+          return;
+        }
+
+        await carregarProduto();
+
+        document.getElementById('form-editar-produto').addEventListener('submit', async (e) => {
+          e.preventDefault();
+
+          const id = getProdutoId();
+          const formData = new FormData();
+          formData.append('nome', document.getElementById('nome').value);
+          formData.append('descricao', document.getElementById('descricao').value);
+          formData.append('preco', document.getElementById('preco').value);
+          formData.append('estoque', document.getElementById('estoque').value);
+
+          const imagemInput = document.getElementById('imagem');
+          if (imagemInput.files.length > 0) {
+            formData.append('imagem', imagemInput.files[0]);
+          }
+
+          const res = await fetch(`/api/produtos/${id}`, {
+            method: 'PUT',
+            headers: {
+              Authorization: `Bearer ${token}`
+            },
+            body: formData
+          });
+
+          if (res.ok) {
+            alert('✅ Produto atualizado com sucesso!');
+            window.location.href = '/listar-produtos.html';
+          } else {
+            const erro = await res.json();
+            alert('❌ Erro ao atualizar produto: ' + (erro.error || 'Erro desconhecido'));
+          }
+        });
+      });
+    }
+    bootstrap();
+  </script>
+</body>
+</html>

@@ -12,7 +12,11 @@ const serviceAccount = JSON.parse(
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
+  storageBucket: "atleticahub-7b449.firebasestorage.app", 
   databaseURL: "https://atleticahub-7b449-default-rtdb.firebaseio.com/",
 });
 
-module.exports = admin;
+const bucket = admin.storage().bucket();
+
+module.exports = { admin, bucket };
+

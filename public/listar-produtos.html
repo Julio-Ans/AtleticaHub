@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Lista de Produtos - Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-auth-compat.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      color: #333;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: white;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+
+    th, td {
+      padding: 12px;
+      border-bottom: 1px solid #ccc;
+      text-align: left;
+    }
+
+    th {
+      background-color: #007bff;
+      color: white;
+    }
+
+    img {
+      max-width: 80px;
+      border-radius: 4px;
+    }
+
+    .actions button {
+      margin-right: 8px;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 4px;
+      color: white;
+      cursor: pointer;
+    }
+
+    .edit-btn {
+      background-color: #28a745;
+    }
+
+    .delete-btn {
+      background-color: #dc3545;
+    }
+
+    .logout {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: red;
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>Lista de Produtos</h1>
+  <button class="logout" onclick="logout()">Sair</button>
+
+  <table id="tabelaProdutos">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Imagem</th>
+        <th>Nome</th>
+        <th>Descrição</th>
+        <th>Preço</th>
+        <th>Estoque</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- produtos carregados dinamicamente -->
+    </tbody>
+  </table>
+
+ <script>
+  async function bootstrap() {
+    const res = await fetch('/config/firebase');
+    const cfg = await res.json();
+    firebase.initializeApp(cfg);
+
+    const auth = firebase.auth();
+
+    function logout() {
+      auth.signOut().then(() => {
+        window.location.href = '/login';
+      });
+    }
+    window.logout = logout;
+
+    async function verificarAdmin(token) {
+      const res = await fetch('/auth/verify-admin', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return res.ok;
+    }
+
+    async function carregarProdutos(token) {
+      const tabelaBody = document.querySelector('#tabelaProdutos tbody');
+      const res = await fetch('/api/produtos');
+      const produtos = await res.json();
+
+      tabelaBody.innerHTML = '';
+      produtos.forEach(produto => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${produto.id}</td>
+          <td><img src="${produto.imagemUrl}" alt="Imagem" /></td>
+          <td>${produto.nome}</td>
+          <td>${produto.descricao}</td>
+          <td>R$ ${produto.preco.toFixed(2)}</td>
+          <td>${produto.estoque}</td>
+          <td class="actions">
+            <button class="edit-btn" onclick="editarProduto(${produto.id})">Editar</button>
+            <button class="delete-btn" onclick="excluirProduto(${produto.id}, '${token}')">Excluir</button>
+          </td>
+        `;
+        tabelaBody.appendChild(tr);
+      });
+    }
+
+    function editarProduto(id) {
+      window.location.href = `/editar-produto.html?id=${id}`;
+    }
+
+    async function excluirProduto(id, token) {
+      if (confirm('Deseja realmente excluir este produto?')) {
+        const res = await fetch(`/api/produtos/${id}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          alert('✅ Produto removido com sucesso!');
+          location.reload();
+        } else {
+          alert('❌ Erro ao excluir produto.');
+        }
+      }
+    }
+
+    auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        const token = await user.getIdToken();
+        const ehAdmin = await verificarAdmin(token);
+
+        if (!ehAdmin) {
+          alert('Você precisa estar logado como admin para acessar esta página.');
+          window.location.href = '/login';
+          return;
+        }
+
+        await carregarProdutos(token);
+        window.editarProduto = editarProduto;
+        window.excluirProduto = excluirProduto;
+      } else {
+        alert('Você precisa estar logado.');
+        window.location.href = '/login';
+      }
+    });
+  }
+
+  bootstrap();
+</script>
+
+</body>
+</html>

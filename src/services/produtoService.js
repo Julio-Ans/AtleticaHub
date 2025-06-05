@@ -1,6 +1,27 @@
-import { create, findAll, update, remove } from '../repositories/produtoRepository';
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
-export function createProduto(data) { return create(data); }
-export function getAllProdutos() { return findAll(); }
-export function updateProduto(id, data) { return update(id, data); }
-export function deleteProduto(id) { return delete(id); }
+exports.criarProduto = async ({ nome, descricao, preco, estoque, imagemUrl }) => {
+  return await prisma.produto.create({
+    data: { nome, descricao, preco, estoque, imagemUrl },
+  });
+};
+
+exports.listarProdutos = async () => {
+  return await prisma.produto.findMany();
+};
+
+exports.detalharProduto = async (id) => {
+  return await prisma.produto.findUnique({ where: { id } });
+};
+
+exports.editarProduto = async (id, dados) => {
+  return await prisma.produto.update({
+    where: { id },
+    data: dados,
+  });
+};
+
+exports.deletarProduto = async (id) => {
+  return await prisma.produto.delete({ where: { id } });
+};

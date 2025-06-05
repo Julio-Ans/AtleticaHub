@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin - Relatório de Vendas</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-auth-compat.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 0; margin: 0;}
+    h1 { color: #003366; text-align: center; margin: 32px 0; }
+    .container { max-width: 1000px; margin: 0 auto; background: #fff; padding: 32px; border-radius: 8px; box-shadow: 0 2px 10px #0001;}
+    table { width: 100%; border-collapse: collapse; margin-top: 20px;}
+    th, td { padding: 12px; border-bottom: 1px solid #ddd;}
+    th { background: #007bff; color: white;}
+    tr:last-child td { border-bottom: none; }
+    .logout { float: right; background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin-bottom: 16px;}
+    .btn-status { padding: 4px 10px; border: none; border-radius: 4px; background: #007bff; color: white; cursor: pointer;}
+    .status-pago { color: #198754; font-weight: bold; }
+    .status-pendente { color: #ffc107; font-weight: bold; }
+    @media (max-width: 700px) {
+      .container { padding: 8px; }
+      th, td { font-size: 12px; padding: 5px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <button class="logout" onclick="logout()">Sair</button>
+    <h1>Relatório de Vendas - Admin</h1>
+    <table id="tabelaVendas">
+      <thead>
+        <tr>
+          <th>ID Pedido</th>
+          <th>Data</th>
+          <th>Usuário</th>
+          <th>Email</th>
+          <th>Curso</th>
+          <th>Produto</th>
+          <th>Qtd.</th>
+          <th>Valor (R$)</th>
+          <th>Status</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <script>
+    async function bootstrap() {
+      // Busca config do backend (garante que é igual aos outros arquivos)
+      const res = await fetch('/config/firebase');
+      const config = await res.json();
+      if (!firebase.apps.length) firebase.initializeApp(config);
+
+      const auth = firebase.auth();
+
+      window.logout = function () {
+        auth.signOut().then(() => window.location.href = '/login');
+      };
+
+      function formatarDataBR(data) {
+        const d = new Date(data);
+        return d.toLocaleDateString('pt-BR') + " " + d.toLocaleTimeString('pt-BR');
+      }
+
+      async function verificarAdmin(token) {
+        const res = await fetch('/auth/verify-admin', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        return res.ok;
+      }
+
+      async function carregarVendas(token) {
+        const res = await fetch('/api/pedidos/admin/vendas', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error('Falha ao buscar vendas');
+        const vendas = await res.json();
+        const tbody = document.querySelector("#tabelaVendas tbody");
+        tbody.innerHTML = "";
+
+        vendas.forEach(produto => {
+          produto.vendas.forEach(venda => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+              <td>${venda.pedidoId}</td>
+              <td>${formatarDataBR(venda.dataPedido)}</td>
+              <td>${venda.usuario?.nome || '-'}</td>
+              <td>${venda.usuario?.email || '-'}</td>
+              <td>${venda.usuario?.curso || '-'}</td>
+              <td>${produto.nome}</td>
+              <td>${venda.quantidade}</td>
+              <td>R$ ${(produto.preco * venda.quantidade).toFixed(2)}</td>
+              <td class="${venda.status === 'pago' ? 'status-pago' : 'status-pendente'}">${venda.status || 'pendente'}</td>
+              <td>
+                ${venda.status !== 'pago' ? `<button class="btn-status" onclick="marcarComoPago(${venda.pedidoId}, '${token}')">Marcar Pago</button>` : ''}
+                ${venda.status !== 'entregue' ? `<button class="btn-status" onclick="marcarEntregue(${venda.pedidoId}, '${token}')">Marcar Entregue</button>` : ''}
+              </td>
+            `;
+            tbody.appendChild(tr);
+          });
+        });
+      }
+
+  window.marcarComoPago = async (pedidoId, token) => {
+  if (!confirm("Marcar esse pedido como PAGO?")) return;
+  const res = await fetch(`/api/pedidos/admin/${pedidoId}/status`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ status: "pago" })
+  });
+  if (res.ok) {
+    alert("Pedido marcado como PAGO!");
+    carregarVendas(token);
+  } else {
+    alert("Erro ao atualizar status.");
+  }
+};
+
+ window.marcarEntregue = async (pedidoId, token) => {
+  if (!confirm("Marcar esse pedido como ENTREGUE?")) return;
+  const res = await fetch(`/api/pedidos/admin/${pedidoId}/status`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ status: "entregue" })
+  });
+  if (res.ok) {
+    alert("Pedido marcado como ENTREGUE!");
+    carregarVendas(token);
+  } else {
+    alert("Erro ao atualizar status.");
+  }
+};
+      // Protege a tela e carrega dados SÓ SE for admin autenticado!
+      auth.onAuthStateChanged(async (user) => {
+        if (!user) {
+          alert("Você precisa estar logado como admin!");
+          window.location.href = "/login";
+          return;
+        }
+        const token = await user.getIdToken();
+        const ehAdmin = await verificarAdmin(token);
+        if (!ehAdmin) {
+          alert("Você precisa estar logado como admin!");
+          window.location.href = "/login";
+          return;
+        }
+        carregarVendas(token).catch(() => {
+          alert("Erro ao carregar vendas.");
+        });
+      });
+    }
+    bootstrap();
+  </script>
+</body>
+</html>

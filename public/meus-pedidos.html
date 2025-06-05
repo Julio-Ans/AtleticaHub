@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Meus Pedidos</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-auth-compat.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f6f6f6; margin:0; padding:30px;}
+    h1   { color: #333; }
+    .pedido { background: #fff; border-radius:6px; box-shadow:0 0 8px #0001; margin-bottom:25px; padding: 16px;}
+    .pedido-header { font-weight:bold; margin-bottom:8px; }
+    .produtos-table { width:100%; border-collapse:collapse; margin-top:8px;}
+    .produtos-table th, .produtos-table td { border-bottom:1px solid #eee; padding:7px;}
+    .produtos-table th { background: #007bff; color: white;}
+    .status { font-weight:bold; }
+    .status.pendente { color: #c77f00; }
+    .status.pago { color: #28a745; }
+    .status.enviado { color: #007bff; }
+    .status.cancelado { color: #dc3545; }
+    .logout {
+      background: red; color: white; border: none;
+      border-radius: 6px; padding: 8px 16px;
+      position: absolute; top: 20px; right: 20px; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>Meus Pedidos</h1>
+  <button class="logout" onclick="logout()">Sair</button>
+  <div id="pedidos"></div>
+
+  <script>
+    (async () => {
+      const resp = await fetch('/config/firebase');
+      const cfg = await resp.json();
+      firebase.initializeApp(cfg);
+
+      let user, token;
+
+      firebase.auth().onAuthStateChanged(async (u) => {
+        if (!u) {
+          alert('Você precisa estar logado para acessar esta página.');
+          window.location.href = '/login';
+          return;
+        }
+        user = u;
+        token = await user.getIdToken();
+        carregarPedidos();
+      });
+
+      async function carregarPedidos() {
+        try {
+          const res = await fetch('/api/pedidos/meus', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const pedidos = await res.json();
+          const div = document.getElementById('pedidos');
+          div.innerHTML = '';
+
+          if (!Array.isArray(pedidos) || !pedidos.length) {
+            div.innerHTML = `<div style="color:#888;font-size:18px;">Você ainda não fez nenhum pedido.</div>`;
+            return;
+          }
+
+          pedidos.forEach(pedido => {
+            const pedidoDiv = document.createElement('div');
+            pedidoDiv.className = 'pedido';
+            pedidoDiv.innerHTML = `
+              <div class="pedido-header">
+                Pedido #${pedido.id} | <span class="status ${pedido.status}">${pedido.status.charAt(0).toUpperCase() + pedido.status.slice(1)}</span> | 
+                Data: ${new Date(pedido.createdAt).toLocaleString('pt-BR')}
+                <br><b>Total:</b> R$ ${pedido.total.toFixed(2)}
+              </div>
+              <table class="produtos-table">
+                <thead>
+                  <tr>
+                    <th>Produto</th>
+                    <th>Imagem</th>
+                    <th>Quantidade</th>
+                    <th>Preço</th>
+                    <th>Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${pedido.produtos.map(p =>
+                    `<tr>
+                      <td>${p.produto.nome}</td>
+                      <td><img src="${p.produto.imagemUrl}" style="max-width:50px"></td>
+                      <td>${p.quantidade}</td>
+                      <td>R$ ${p.produto.preco.toFixed(2)}</td>
+                      <td>R$ ${(p.produto.preco * p.quantidade).toFixed(2)}</td>
+                    </tr>`
+                  ).join('')}
+                </tbody>
+              </table>
+            `;
+            div.appendChild(pedidoDiv);
+          });
+        } catch (err) {
+          alert('Erro ao carregar pedidos.');
+        }
+      }
+
+      window.logout = function() {
+        firebase.auth().signOut().then(() => window.location.href = '/login');
+      };
+
+    })();
+  </script>
+</body>
+</html>
