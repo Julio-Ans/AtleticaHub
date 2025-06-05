@@ -1,3 +1,6 @@
+const userRepository = require('../repositories/userRepository');
+
+// Middleware: Verifica papel do usuário consultando o banco pelo UID
 function checkRole(requiredRole) {
   return (req, res, next) => {
     try {
