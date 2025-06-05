@@ -52,15 +52,16 @@ async function loginUser(req, res) {
       return res.status(400).json({ error: 'Token não fornecido.' });
     }
 
-    const user = await authService.verifyIdToken(idToken);
+    // Verificar token do Firebase e buscar/criar usuário
+    const result = await authService.loginUser(idToken);
 
-    // Obter os dados do usuário do banco de dados
-    const usuario = await authService.getUsuario(user.uid);
-
-    // Verificar o papel do usuário para redirecionar para o dashboard apropriado
-    const role = usuario ? usuario.role : 'user';  // Padrão para 'user' caso o papel não seja encontrado
-
-    res.status(200).json({ message: 'Login bem-sucedido', user, role });
+    res.status(200).json({
+      message: 'Login bem-sucedido',
+      uid: result.uid,
+      email: result.email,
+      nome: result.nome,
+      role: result.role
+    });
   } catch (err) {
     console.error('❌ Erro ao logar:', err);
     res.status(401).json({ error: err.message });

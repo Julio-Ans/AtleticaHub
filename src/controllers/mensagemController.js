@@ -1,38 +1,35 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
 const mensagemService = require('../services/mensagemService');
+const esporteService = require('../services/esporteService');
+const inscricaoService = require('../services/inscricaoService');
 
 // 🔐 Verifica se o usuário tem permissão para acessar o grupo de esporte
 async function verificarPermissao(req, esporteId) {
   // Garantir que o esporteId seja uma string
   const esporteIdStr = String(esporteId);
   
-  // Verifica se o esporte existe no banco
-  const esporte = await prisma.esporte.findUnique({
-    where: {
-      id: esporteIdStr  // Usar a string convertida
-    }
-  });
-
-  if (!esporte && esporteIdStr !== "0") {
-    throw new Error('Esporte não encontrado.');
-  }
-
   // Acesso livre ao grupo "Geral"
   if (esporteIdStr === "0") return;
 
   // Admin tem acesso irrestrito
   if (req.user.role === 'admin') return;
 
-  const inscricao = await prisma.inscricao.findFirst({
-    where: {
-      usuarioId: req.user.uid,
-      esporteId: esporteIdStr,  // Usar a string convertida
-      status: 'aceito'
+  try {
+    // Verifica se o esporte existe
+    const esporte = await esporteService.buscarEsportePorId(esporteIdStr);
+    if (!esporte) {
+      throw new Error('Esporte não encontrado.');
     }
-  });
+  } catch (error) {
+    throw new Error('Esporte não encontrado.');
+  }
 
-  if (!inscricao) {
+  // Verifica se o usuário tem inscrição aceita no esporte
+  const inscricoes = await inscricaoService.listarPorUsuario(req.user.uid);
+  const inscricaoAceita = inscricoes.find(
+    inscricao => inscricao.esporteId === esporteIdStr && inscricao.status === 'aceito'
+  );
+
+  if (!inscricaoAceita) {
     throw new Error('Acesso negado: você não está inscrito neste esporte.');
   }
 }

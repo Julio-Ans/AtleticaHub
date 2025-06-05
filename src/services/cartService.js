@@ -1,54 +1,83 @@
-import { findById } from '../repositories/produtoRepository';
-import { add, findByEmail, findById as _findById, updateQty, remove } from '../repositories/cartItemRepository';
+const produtoRepository = require('../repositories/produtoRepository');
+const cartItemRepository = require('../repositories/cartItemRepository');
+const pedidoRepository = require('../repositories/pedidoRepository');
 
-export async function addToCart({ studentEmail, produtoId, quantidade }) {
-  const produto = await findById(produtoId);
-  if (!produto) throw { status: 404, message: 'Produto não encontrado' };
-  if (produto.estoque < quantidade)
-    throw { status: 400, message: 'Estoque insuficiente' };
+class CartService {
+  async addToCart({ studentEmail, produtoId, quantidade }) {
+    const produto = await produtoRepository.findById(produtoId);
+    if (!produto) {
+      throw { status: 404, message: 'Produto não encontrado' };
+    }
+    if (produto.estoque < quantidade) {
+      throw { status: 400, message: 'Estoque insuficiente' };
+    }
 
-  return add({ studentEmail, produtoId, quantidade });
-}
+    return await cartItemRepository.add({ studentEmail, produtoId, quantidade });
+  }
 
-export function getCart(email) { return findByEmail(email); }
+  async getCart(email) {
+    return await cartItemRepository.findByEmail(email);
+  }
 
-export async function updateCartItem(id, quantidade) {
-  const item = await _findById(id);
-  if (!item) throw { status: 404, message: 'Item não encontrado' };
-  if (item.produto.estoque < quantidade)
-    throw { status: 400, message: 'Estoque insuficiente' };
+  async updateCartItem(id, quantidade) {
+    const item = await cartItemRepository.findById(id);
+    if (!item) {
+      throw { status: 404, message: 'Item não encontrado' };
+    }
+    if (item.produto.estoque < quantidade) {
+      throw { status: 400, message: 'Estoque insuficiente' };
+    }
 
-  return updateQty(id, quantidade);
-}
+    return await cartItemRepository.updateQty(id, quantidade);
+  }
 
-export function removeCartItem(id) { return remove(id); }
+  async removeCartItem(id) {
+    return await cartItemRepository.remove(id);
+  }
 
-export async function checkout(studentEmail) {
-  const items = await findByEmail(studentEmail);
-  if (!items.length) throw { status: 400, message: 'Carrinho vazio' };
+  async checkout(studentEmail) {
+    const items = await cartItemRepository.findByEmail(studentEmail);
+    if (!items.length) {
+      throw { status: 400, message: 'Carrinho vazio' };
+    }
 
-  let total = 0;
-  const produtosPedido = [];
+    let total = 0;
+    const produtosPedido = [];
 
-  return require('@prisma/client').PrismaClient().$transaction(async prisma => {
+    // Validar estoque e calcular total
     for (const item of items) {
-      if (item.produto.estoque < item.quantidade)
+      if (item.produto.estoque < item.quantidade) {
         throw { status: 400, message: `Estoque insuficiente para ${item.produto.nome}` };
+      }
 
       total += item.produto.preco * item.quantidade;
-      produtosPedido.push({ produtoId: item.produto.id, quantidade: item.quantidade });
-
-      await prisma.produto.update({
-        where: { id: item.produto.id },
-        data: { estoque: item.produto.estoque - item.quantidade },
+      produtosPedido.push({ 
+        produtoId: item.produto.id, 
+        quantidade: item.quantidade 
       });
     }
 
-    const pedido = await prisma.pedido.create({
-      data: { studentEmail, produtos: produtosPedido, total, status: 'pendente' },
+    // Criar pedido
+    const pedido = await pedidoRepository.create({
+      studentEmail,
+      produtos: produtosPedido,
+      total,
+      status: 'pendente'
     });
 
-    await prisma.cartItem.deleteMany({ where: { studentEmail } });
+    // Atualizar estoque dos produtos
+    for (const item of items) {
+      await produtoRepository.updateStock(
+        item.produto.id,
+        item.produto.estoque - item.quantidade
+      );
+    }
+
+    // Limpar carrinho
+    await cartItemRepository.clearCart(studentEmail);
+
     return pedido;
-  });
+  }
 }
+
+module.exports = new CartService();

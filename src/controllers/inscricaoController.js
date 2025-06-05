@@ -1,5 +1,3 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
 const inscricaoService = require('../services/inscricaoService');
 
 module.exports = {
@@ -10,14 +8,25 @@ module.exports = {
       const usuarioId = req.user.uid;
 
       const inscricao = await inscricaoService.criarInscricao(usuarioId, esporteId);
-      res.status(201).json(inscricao);
+      
+      // Verificar status para personalizar a resposta
+      if (inscricao.status === 'pendente') {
+        res.status(201).json({
+          inscricao,
+          message: 'Inscrição enviada com sucesso! Aguardando aprovação.'
+        });
+      } else {
+        res.status(201).json({
+          inscricao,
+          message: 'Status da inscrição atualizado com sucesso!'
+        });
+      }
     } catch (err) {
       console.error('Erro ao criar inscrição:', err);
       
       // Tratamento especializado para erros comuns
       if (err.message.includes('grupo Geral') || 
-          err.message.includes('já está inscrito') ||
-          err.message.includes('pendente de aprovação')) {
+          err.message.includes('já está inscrito')) {
         return res.status(400).json({ error: err.message });
       }
       if (err.message.includes('não encontrado')) {

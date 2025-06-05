@@ -206,6 +206,7 @@
       <div class="tab active" onclick="changeTab('inscricoes')">Inscrições</div>
       <div class="tab" onclick="changeTab('mensagens')">Mensagens</div>
       <div class="tab" onclick="changeTab('esportes')">Gerenciar Esportes</div>
+      <div class="tab" onclick="changeTab('eventos')">Gerenciar Eventos</div>
     </div>
     
     <div id="inscricoesTab">
@@ -260,6 +261,25 @@
         <p>Carregando esportes...</p>
       </div>
     </div>
+    
+    <div id="eventosTab" style="display:none">
+      <h2>Gerenciar Eventos</h2>
+      <div class="card">
+        <h3>Criar Novo Evento</h3>
+        <div class="form-group">
+          <input type="text" id="eventoTitulo" class="form-control" placeholder="Título do evento">
+          <input type="text" id="eventoDescricao" class="form-control" placeholder="Descrição (opcional)">
+          <input type="text" id="eventoTipo" class="form-control" placeholder="Tipo (treino, festa, etc)">
+          <input type="datetime-local" id="eventoData" class="form-control" placeholder="Data e hora">
+          <input type="text" id="eventoLocal" class="form-control" placeholder="Local">
+          <input type="file" id="eventoFoto" class="form-control" accept="image/*">
+        </div>
+        <button onclick="criarEvento()">Criar Evento</button>
+      </div>
+      <div id="listaEventosAdmin">
+        <p>Carregando eventos...</p>
+      </div>
+    </div>
   </div>
 
   <!-- Vendas por produto -->
@@ -302,6 +322,7 @@
             await carregarEsportes();
             await carregarEsportesParaMensagens();
             await mudarEsporteMensagens("0");
+            await carregarEventosAdmin();
           }
         });
       } catch (err) {
@@ -337,6 +358,7 @@
       document.getElementById('inscricoesTab').style.display = 'none';
       document.getElementById('mensagensTab').style.display = 'none';
       document.getElementById('esportesTab').style.display = 'none';
+      document.getElementById('eventosTab').style.display = 'none';
       
       // Remover classe ativa de todas as abas
       document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
@@ -823,41 +845,113 @@
       } catch (error) {
         console.error('Erro ao mudar esporte:', error);
       }
-    }   
+    }    async function carregarEventosAdmin() {
+      try {
+        const token = await firebaseUser.getIdToken();
+        const res = await fetch('/api/eventos', { headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) throw new Error('Erro ao carregar eventos');
+        const eventos = await res.json();
+        const lista = document.getElementById('listaEventosAdmin');
+        if (!eventos.length) {
+          lista.innerHTML = '<p>Nenhum evento cadastrado.</p>';
+          return;
+        }
+        lista.innerHTML = '';
+        eventos.forEach(ev => {
+          const div = document.createElement('div');
+          div.className = 'card';
+          div.innerHTML = `
+            <h3>${ev.titulo}</h3>
+            ${ev.fotoUrl ? `<img src="${ev.fotoUrl}" alt="Foto do evento" style="max-width:200px;max-height:150px;display:block;margin-bottom:10px;">` : ''}
+            <p><b>Tipo:</b> ${ev.tipo} | <b>Data:</b> ${new Date(ev.data).toLocaleString()} | <b>Local:</b> ${ev.local}</p>
+            <p>${ev.descricao || ''}</p>
+            <button onclick="editarEvento('${ev._id}')">Editar</button>
+            <button class="btn-danger" onclick="removerEvento('${ev._id}')">Remover</button>
+            <details><summary>Ver inscritos</summary>
+              <ul>${(ev.inscricoes||[]).map(i=>`<li>${i.nome||i.usuarioId} (${i.email||''})</li>`).join('')}</ul>
+            </details>
+          `;
+          lista.appendChild(div);
+        });
+      } catch (err) {
+        document.getElementById('listaEventosAdmin').innerHTML = '<p>Erro ao carregar eventos.</p>';
+      }
+    }
 
-    // Vendas por produtos
-    async function carregarVendasAdmin() {
-    const token = await firebaseUser.getIdToken();
+    async function criarEvento() {
+      try {
+        const titulo = document.getElementById('eventoTitulo').value.trim();
+        const descricao = document.getElementById('eventoDescricao').value.trim();
+        const tipo = document.getElementById('eventoTipo').value.trim();
+        const data = document.getElementById('eventoData').value;
+        const local = document.getElementById('eventoLocal').value.trim();
+        const foto = document.getElementById('eventoFoto').files[0];
+        
+        if (!titulo || !tipo || !data || !local) {
+          return alert('Preencha todos os campos obrigatórios!');
+        }
+        const token = await firebaseUser.getIdToken();
+        const formData = new FormData();
+        formData.append('titulo', titulo);
+        formData.append('descricao', descricao);
+        formData.append('tipo', tipo);
+        formData.append('data', data);
+        formData.append('local', local);
+        if (foto) {
+          formData.append('foto', foto);
+        }
+        const res = await fetch('/api/eventos', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData
+        });
+        if (!res.ok) {
+          throw new Error('Erro ao criar evento');
+        }
+        
+        alert('Evento criado!');
+        document.getElementById('eventoTitulo').value = '';
+        document.getElementById('eventoDescricao').value = '';
+        document.getElementById('eventoTipo').value = '';
+        document.getElementById('eventoData').value = '';
+        document.getElementById('eventoLocal').value = '';
+        document.getElementById('eventoFoto').value = '';
+        await carregarEventosAdmin();
+      } catch (err) {
+        alert('Erro ao criar evento.');
+      }
+    }
 
-    const res = await fetch('/api/pedidos/admin/vendas', {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    async function removerEvento(id) {
+      if (!confirm('Remover este evento?')) return;
+      try {
+        const token = await firebaseUser.getIdToken();
+        const res = await fetch(`/api/eventos/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) throw new Error('Erro ao remover evento');
+        alert('Evento removido!');
+        await carregarEventosAdmin();
+      } catch (err) {
+        alert('Erro ao remover evento.');
+      }
+    }
 
-    const produtos = await res.json();
-    let html = '';
-
-    produtos.forEach(prod => {
-      html += `<h3>${prod.nome} - R$${prod.preco.toFixed(2)}</h3>`;
-      html += '<table border="1" cellpadding="6"><thead><tr><th>Pedido</th><th>Qtd</th><th>Data</th><th>Usuário</th></tr></thead><tbody>';
-
-      prod.vendas.forEach(venda => {
-        html += `<tr>
-          <td>${venda.pedidoId}</td>
-          <td>${venda.quantidade}</td>
-          <td>${new Date(venda.dataPedido).toLocaleString()}</td>
-          <td>${venda.usuario?.nome || 'N/A'} (${venda.usuario?.email})</td>
-        </tr>`;
-      });
-
-      html += '</tbody></table><br>';
-    });
-
-    document.getElementById('relatorioVendas').innerHTML = html;
-  }
-
-  carregarVendasAdmin();
-    
-    // Iniciar a aplicação
+    async function editarEvento(id) {
+      const novoTitulo = prompt('Novo título do evento:');
+      if (!novoTitulo) return;
+      try {
+        const token = await firebaseUser.getIdToken();
+        const res = await fetch(`/api/eventos/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ titulo: novoTitulo })
+        });
+        if (!res.ok) throw new Error('Erro ao editar evento');
+        alert('Evento atualizado!');
+        await carregarEventosAdmin();
+      } catch (err) {
+        alert('Erro ao editar evento.');
+      }
+    }    // Iniciar a aplicação
     main();
   </script>
 </body>
