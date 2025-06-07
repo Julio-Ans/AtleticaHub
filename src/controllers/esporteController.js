@@ -101,8 +101,7 @@ module.exports = {
     try {
       const { id } = req.params;
       await esporteService.excluirEsporte(id);
-      res.json({ message: 'Esporte removido com sucesso.' });
-    } catch (err) {
+      res.json({ message: 'Esporte removido com sucesso.' });    } catch (err) {
       console.error('Erro ao remover esporte:', err);
       
       // Tratamento especializado para erros comuns
@@ -111,9 +110,6 @@ module.exports = {
       }
       if (err.message.includes('não encontrado')) {
         return res.status(404).json({ error: err.message });
-      }
-      if (err.message.includes('inscrições ativas')) {
-        return res.status(400).json({ error: err.message });
       }
       
       res.status(500).json({ error: err.message });

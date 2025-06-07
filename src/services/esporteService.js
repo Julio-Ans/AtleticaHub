@@ -71,20 +71,21 @@ module.exports = {  async listarEsportes() {
       throw error;
     }
   },
-
   async excluirEsporte(id) {
     try {
       // Validações
       if (id === "0") {
         throw new Error('O esporte Geral não pode ser excluído');
       }
-        // Verificar se existem inscrições para este esporte
-      const numeroInscricoes = await esporteRepository.countInscricoes(id);
       
-      if (numeroInscricoes > 0) {
-        throw new Error('Não é possível excluir um esporte com inscrições ativas');
+      // Verificar se o esporte existe antes de tentar excluir
+      const esporte = await esporteRepository.findById(id);
+      if (!esporte) {
+        throw new Error('Esporte não encontrado');
       }
-        return await esporteRepository.delete(id);
+      
+      // Delete with cascade (will delete all inscriptions automatically)
+      return await esporteRepository.delete(id);
     } catch (error) {
       console.error('Erro ao excluir esporte:', error);
       throw error;

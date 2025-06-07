@@ -162,7 +162,7 @@ Authorization: Bearer <token>
 
 ### 1. Listar Eventos (Público)
 ```javascript
-GET /api/events
+GET /api/eventos
 ```
 
 **Resposta:**
@@ -170,12 +170,12 @@ GET /api/events
 [
   {
     "_id": "60f1b2a3c4e5f6a7b8c9d0e1",
-    "titulo": "Campeonato de Futebol",
-    "descricao": "Torneio interno",
-    "tipo": "campeonato",
-    "data": "2024-12-31T00:00:00.000Z",
-    "local": "Quadra Principal",
-    "esporteId": "1",
+    "titulo": "Treino de Futebol",
+    "descricao": "Treino técnico semanal",
+    "tipo": "treino",
+    "data": "2024-12-31T18:00:00.000Z",
+    "local": "Campo Principal",
+    "esporteId": "123",
     "criadorId": "admin123",
     "fotoUrl": "https://storage.googleapis.com/...",
     "inscricoes": [
@@ -186,44 +186,112 @@ GET /api/events
         "dataInscricao": "2024-01-01T00:00:00.000Z"
       }
     ]
+  },
+  {
+    "_id": "60f1b2a3c4e5f6a7b8c9d0e2",
+    "titulo": "Festa de Confraternização",
+    "descricao": "Festa de final de ano",
+    "tipo": "festa",
+    "data": "2024-12-31T20:00:00.000Z",
+    "local": "Salão de Festas",
+    "esporteId": "0",
+    "criadorId": "admin123",
+    "fotoUrl": "https://storage.googleapis.com/...",
+    "inscricoes": []
   }
 ]
 ```
 
 ### 2. Listar Eventos por Esporte
 ```javascript
-GET /api/events/esporte/:esporteId
+GET /api/eventos/esporte/:esporteId
 ```
 
 **Exemplo:**
 ```javascript
-GET /api/events/esporte/1  // Eventos do esporte com ID 1
-GET /api/events/esporte/0  // Eventos gerais
+GET /api/eventos/esporte/1  // Eventos do esporte com ID 1
+GET /api/eventos/esporte/0  // Eventos gerais
 ```
 
 ### 3. Buscar Evento por ID
 ```javascript
-GET /api/events/:id
+GET /api/eventos/:id
 ```
 
 ### 4. Criar Evento (Admin apenas)
 ```javascript
-POST /api/events
+POST /api/eventos
 Authorization: Bearer <token>
 Content-Type: multipart/form-data
 
 titulo: "Novo Evento"
 descricao: "Descrição do evento"
-tipo: "treino" // treino, campeonato, festa, etc.
+tipo: "festa" // Determinado automaticamente baseado na seleção do dropdown
 data: "2024-12-31T18:00:00Z"
 local: "Local do evento"
-esporteId: "1" // ID do esporte (use "0" para eventos gerais)
+esporteId: "0" // "0" para eventos gerais, ID do esporte para treinos
 foto: [arquivo de imagem - opcional]
+```
+
+**📋 Nova Estrutura de Criação via Interface:**
+
+**Interface de Criação:**
+1. **Primeiro Dropdown** - Tipo de Evento:
+   - `geral`: Para eventos abertos a todos
+   - `treino`: Para treinos específicos de esporte
+
+2. **Segundo Dropdown** - Depende do primeiro:
+   - Se `geral` → Subtipos: `reuniao`, `festa`, `confraternizacao`, `palestra`, `workshop`, `assembleia`, `outro`
+   - Se `treino` → Lista de esportes disponíveis
+
+**Lógica de Determinação:**
+```javascript
+// Para eventos gerais
+if (tipoEvento === 'geral') {
+  tipo = subtipo; // reuniao, festa, etc.
+  esporteId = '0';
+}
+
+// Para treinos
+if (tipoEvento === 'treino') {
+  tipo = 'treino';
+  esporteId = idDoEsporteSelecionado;
+}
+```
+
+**1. Eventos Gerais (esporteId = "0"):**
+- **tipo:** `reuniao`, `festa`, `confraternizacao`, `palestra`, `workshop`, `assembleia`, `outro`
+- **Público:** Todos os usuários podem se inscrever
+
+**2. Treinos de Esporte Específico:**
+- **tipo:** `treino`
+- **esporteId:** ID do esporte específico
+- **Público:** Apenas usuários inscritos E aceitos no esporte
+
+**Exemplos de Criação via API:**
+```javascript
+// Para evento geral (festa)
+const formData = new FormData();
+formData.append('titulo', 'Festa de Confraternização');
+formData.append('descricao', 'Festa de final de ano da atlética');
+formData.append('tipo', 'festa');
+formData.append('esporteId', '0');
+formData.append('data', '2024-12-31T20:00:00Z');
+formData.append('local', 'Salão de Festas');
+
+// Para treino de futebol
+const formData = new FormData();
+formData.append('titulo', 'Treino de Futebol');
+formData.append('descricao', 'Treino técnico semanal');
+formData.append('tipo', 'treino');
+formData.append('esporteId', '123'); // ID do esporte futebol
+formData.append('data', '2024-12-31T18:00:00Z');
+formData.append('local', 'Campo de Futebol');
 ```
 
 ### 5. Atualizar Evento (Admin apenas)
 ```javascript
-PUT /api/events/:id
+PUT /api/eventos/:id
 Authorization: Bearer <token>
 Content-Type: application/json
 
@@ -237,20 +305,52 @@ Content-Type: application/json
 
 ### 6. Excluir Evento (Admin apenas)
 ```javascript
-DELETE /api/events/:id
+DELETE /api/eventos/:id
 Authorization: Bearer <token>
 ```
 
 ### 7. Inscrever-se em Evento
 ```javascript
-POST /api/events/:id/inscrever
+POST /api/eventos/:id/inscrever
 Authorization: Bearer <token>
 ```
 
-**⚠️ Regras de Validação:**
-- Para eventos gerais (`esporteId = "0"`): Qualquer usuário pode se inscrever
-- Para eventos de esportes específicos: Usuário deve estar inscrito **E aceito** no esporte
-- Administradores podem se inscrever em qualquer evento
+**⚠️ Regras de Validação e Negócio:**
+
+**Criação de Eventos (Admin apenas):**
+- Todos os campos são obrigatórios: `titulo`, `data`, `local`, `esporteId`
+- Upload de foto é opcional, mas deve ser uma imagem válida
+- Validação automática de arquivo: tamanho e tipo de imagem
+
+**Inscrição em Eventos:**
+- **Eventos Gerais** (`esporteId = "0"`): Qualquer usuário autenticado pode se inscrever
+- **Eventos de Esporte** (`esporteId ≠ "0"`): 
+  - Usuário deve estar inscrito **E aceito** no esporte específico
+  - Administradores podem se inscrever em qualquer evento
+- **Validações adicionais:**
+  - Usuário não pode se inscrever duas vezes no mesmo evento
+  - Evento deve existir e estar ativo
+
+**Lógica de Verificação de Permissão:**
+```javascript
+// Pseudocódigo da validação
+if (evento.esporteId !== "0" && usuario.role !== 'admin') {
+  const inscricoes = await buscarInscricoesDoUsuario(usuarioId);
+  const inscricaoAceita = inscricoes.find(
+    inscricao => inscricao.esporteId === evento.esporteId && 
+                 inscricao.status === 'aceito'
+  );
+  
+  if (!inscricaoAceita) {
+    throw new Error('Você precisa estar inscrito no esporte associado a este evento');
+  }
+}
+```
+
+**Estados de Inscrição em Esportes:**
+- `pendente`: Aguardando aprovação do administrador
+- `aceito`: Aprovado, pode se inscrever em eventos do esporte
+- `rejeitado`: Rejeitado pelo administrador
 
 **Possíveis respostas de erro:**
 ```json
@@ -263,19 +363,132 @@ Authorization: Bearer <token>
 {
   "error": "Usuário já está inscrito neste evento"
 }
+
+// Erro 404 - Evento não encontrado
+{
+  "error": "Evento não encontrado"
+}
+
+// Erro 400 - Campos obrigatórios
+{
+  "error": "Título, data, local e esporte são obrigatórios."
+}
+```
+
+**🎯 Interface de Administração - Criação de Eventos:**
+
+A interface de administração utiliza dropdowns em cascata para simplificar a criação de eventos:
+
+```html
+<!-- Primeiro dropdown: Tipo de evento -->
+<select id="eventoTipo" onchange="mostrarSubopcoes()">
+  <option value="">Selecione o tipo de evento...</option>
+  <option value="geral">Geral</option>
+  <option value="treino">Treino</option>
+</select>
+
+<!-- Segundo dropdown: Dinâmico baseado no primeiro -->
+<select id="eventoSubtipo" style="display: none;">
+  <option value="">Selecione...</option>
+  <!-- Conteúdo carregado dinamicamente -->
+</select>
+```
+
+**Função JavaScript para Controle de Dropdowns:**
+```javascript
+function mostrarSubopcoes() {
+  const tipoSelect = document.getElementById('eventoTipo');
+  const subtipoSelect = document.getElementById('eventoSubtipo');
+  const tipoSelecionado = tipoSelect.value;
+  
+  subtipoSelect.innerHTML = '<option value="">Selecione...</option>';
+  
+  if (tipoSelecionado === 'geral') {
+    subtipoSelect.style.display = 'block';
+    const subtiposGerais = [
+      { value: 'reuniao', text: 'Reunião' },
+      { value: 'festa', text: 'Festa' },
+      { value: 'confraternizacao', text: 'Confraternização' },
+      { value: 'palestra', text: 'Palestra' },
+      { value: 'workshop', text: 'Workshop' },
+      { value: 'assembleia', text: 'Assembleia' },
+      { value: 'outro', text: 'Outro' }
+    ];
+    
+    subtiposGerais.forEach(subtipo => {
+      const option = document.createElement('option');
+      option.value = subtipo.value;
+      option.textContent = subtipo.text;
+      subtipoSelect.appendChild(option);
+    });
+    
+  } else if (tipoSelecionado === 'treino') {
+    subtipoSelect.style.display = 'block';
+    carregarEsportesParaTreino(); // Carrega lista de esportes
+  } else {
+    subtipoSelect.style.display = 'none';
+  }
+}
 ```
 
 ### 8. Cancelar Inscrição em Evento
 ```javascript
-DELETE /api/events/:id/inscrever
+DELETE /api/eventos/:id/inscrever
 Authorization: Bearer <token>
 ```
 
 ### 9. Meus Eventos
 ```javascript
-GET /api/events/minhas/inscricoes
+GET /api/eventos/minhas/inscricoes
 Authorization: Bearer <token>
 ```
+
+**📊 Fluxo Completo de Eventos:**
+
+**1. Administrador cria evento:**
+```javascript
+// Admin seleciona no frontend:
+// Dropdown 1: "Geral" ou "Treino"
+// Dropdown 2: Se Geral → tipo de evento / Se Treino → esporte
+
+// Resultado da API:
+POST /api/eventos
+{
+  "titulo": "Festa de Confraternização",
+  "tipo": "festa",           // Determinado pela seleção
+  "esporteId": "0",         // "0" para geral, ID para treino
+  "data": "2024-12-31T20:00:00Z",
+  "local": "Salão de Festas"
+}
+```
+
+**2. Usuário tenta se inscrever:**
+```javascript
+POST /api/eventos/:id/inscrever
+
+// Sistema verifica:
+// - Evento existe?
+// - Usuário já inscrito?
+// - Se evento geral (esporteId="0") → OK
+// - Se evento de esporte → usuário aceito no esporte?
+// - Se admin → sempre OK
+```
+
+**3. Possíveis cenários:**
+- ✅ **Evento Geral**: Qualquer usuário autenticado pode se inscrever
+- ✅ **Treino + Usuário Aceito**: Usuário inscrito e aceito no esporte pode se inscrever
+- ✅ **Admin**: Pode se inscrever em qualquer evento
+- ❌ **Treino + Usuário Não Aceito**: Erro 403
+- ❌ **Usuário Já Inscrito**: Erro 400
+
+**4. Listagem inteligente:**
+```javascript
+GET /api/eventos              // Todos os eventos
+GET /api/eventos/esporte/0    // Apenas eventos gerais
+GET /api/eventos/esporte/123  // Apenas treinos do esporte 123
+```
+
+Este sistema garante que usuários só possam se inscrever em treinos de esportes nos quais já estão aprovados, mantendo a organização e segurança do sistema de eventos esportivos.
 
 ---
 

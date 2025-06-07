@@ -114,8 +114,7 @@ module.exports = {
           idToken: { type: "string" }
         },
         required: ["idToken"]
-      },
-      RegisterRequest: {
+      },      RegisterRequest: {
         type: "object",
         required: ["email", "password", "nome", "telefone", "curso", "dataNascimento"],
         properties: {
@@ -127,8 +126,7 @@ module.exports = {
           dataNascimento: { type: "string", format: "date" },
           codigo: { type: "string", description: "Código de convite opcional para admin" }
         }
-      },
-      LoginRequest: {
+      },      TokenRequest: {
         type: "object",
         required: ["idToken"],
         properties: {
@@ -219,8 +217,7 @@ module.exports = {
           "403": { description: "Email não autorizado" }
         }
       }
-    },
-    "/auth/login": {
+    },    "/auth/login": {
       post: {
         summary: "Login do usuário",
         tags: ["Auth"],
@@ -228,7 +225,7 @@ module.exports = {
           required: true,
           content: {
             "application/json": {
-              schema: { "$ref": "#/components/schemas/LoginRequest" }
+              schema: { "$ref": "#/components/schemas/TokenRequest" }
             }
           }
         },
@@ -246,8 +243,7 @@ module.exports = {
           "404": { description: "Usuário não encontrado" }
         }
       }
-    },
-    "/auth/verify": {
+    },    "/auth/verify": {
       post: {
         summary: "Verificar token de autenticação",
         tags: ["Auth"],
@@ -255,7 +251,7 @@ module.exports = {
           required: true,
           content: {
             "application/json": {
-              schema: { "$ref": "#/components/schemas/LoginRequest" }
+              schema: { "$ref": "#/components/schemas/TokenRequest" }
             }
           }
         },
@@ -273,7 +269,7 @@ module.exports = {
           required: true,
           content: {
             "application/json": {
-              schema: { "$ref": "#/components/schemas/LoginRequest" }
+              schema: { "$ref": "#/components/schemas/TokenRequest" }
             }
           }
         },
@@ -331,44 +327,7 @@ module.exports = {
         summary: "Logout do usuário",
         tags: ["Auth"],
         responses: {
-          "200": { description: "Logout realizado com sucesso" }
-        }
-      }
-    },
-    "/auth/legacy-register": {
-      post: {
-        summary: "Registrar usuário (legado)",
-        tags: ["Auth"],
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: { "$ref": "#/components/schemas/RegisterRequest" }
-            }
-          }
-        },
-        responses: {
-          "201": { description: "Usuário registrado com sucesso" },
-          "400": { description: "Erro de validação" }
-        }
-      }
-    },
-    "/auth/legacy-login": {
-      post: {
-        summary: "Login do usuário (legado)",
-        tags: ["Auth"],
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: { "$ref": "#/components/schemas/LoginRequest" }
-            }
-          }
-        },
-        responses: {
-          "200": { description: "Login realizado com sucesso" },
-          "400": { description: "Token não fornecido" }
-        }
+          "200": { description: "Logout realizado com sucesso" }        }
       }
     },
     "/auth/verify-user": {
