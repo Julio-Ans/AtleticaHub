@@ -1,10 +1,31 @@
 const admin = require('../config/firebaseAdmin');
-const serviceAccount = require('../config/firebase-service-account.json');
+
+// Função auxiliar para obter o project ID
+function getProjectId() {
+  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    try {
+      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+      return serviceAccount.project_id;
+    } catch (error) {
+      console.error('Erro ao parsear FIREBASE_SERVICE_ACCOUNT:', error);
+      return 'atleticahub-7b449'; // fallback
+    }
+  } else {
+    // Em desenvolvimento, tentar carregar do arquivo
+    try {
+      const serviceAccount = require('../config/firebase-service-account.json');
+      return serviceAccount.project_id;
+    } catch (error) {
+      console.warn('Arquivo firebase-service-account.json não encontrado, usando project_id padrão');
+      return 'atleticahub-7b449'; // fallback
+    }
+  }
+}
 
 class UploadService {
   constructor() {
-    // Configuração dinâmica do bucket (mesmo padrão dos controllers antigos)
-    const projectId = serviceAccount.project_id;
+    // Obter projeto ID do Firebase Admin já configurado
+    const projectId = getProjectId();
     
     // Tentar primeiro com o bucket padrão do Firebase Storage
     let bucketName = `${projectId}.firebasestorage.app`;
@@ -12,11 +33,9 @@ class UploadService {
     this.bucket = admin.storage().bucket(bucketName);
     this.bucketInitialized = false;
     this.initializeBucket();
-  }
-
-  async initializeBucket() {
+  }  async initializeBucket() {
     try {
-      const projectId = serviceAccount.project_id;
+      const projectId = getProjectId();
       let bucketName = `${projectId}.appspot.com`;
       
       this.bucket = admin.storage().bucket(bucketName);
@@ -32,11 +51,10 @@ class UploadService {
           console.error('Nenhum bucket encontrado! Verifique a configuração do Firebase Storage.');
         }
       }
-      this.bucketInitialized = true;
-    } catch (err) {
+      this.bucketInitialized = true;    } catch (err) {
       console.error('Erro ao inicializar bucket:', err);
       // Fallback para o bucket Firebase Storage
-      const projectId = serviceAccount.project_id;
+      const projectId = getProjectId();
       const firebaseBucketName = `${projectId}.firebasestorage.app`;
       this.bucket = admin.storage().bucket(firebaseBucketName);
       this.bucketInitialized = true;
