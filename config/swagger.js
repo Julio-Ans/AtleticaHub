@@ -194,107 +194,10 @@ module.exports = {
   },
   paths: {
     // Autenticação
-    "/auth/login": {
-      post: {
-        summary: "Autenticação com token Firebase",
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: { $ref: "#/components/schemas/Login" }
-            }
-          }
-        },
-        responses: {
-          "200": {
-            description: "Login bem sucedido",
-            content: {
-              "application/json": {
-                schema: {
-                  type: "object",
-                  properties: {
-                    user: { $ref: "#/components/schemas/Usuario" },
-                    token: { type: "string" }
-                  }
-                }
-              }
-            }
-          },
-          "400": { 
-            description: "Token inválido ou não fornecido",
-            content: {
-              "application/json": {
-                schema: { $ref: "#/components/schemas/ErrorResponse" }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/auth/verify-user": {
-      get: {
-        summary: "Verifica acesso de usuário comum",
-        security: [{ bearerAuth: [] }],
-        responses: {
-          "200": {
-            description: "Acesso permitido",
-            content: {
-              "application/json": {
-                schema: {
-                  type: "object",
-                  properties: {
-                    access: { type: "string", example: "granted" }
-                  }
-                }
-              }
-            }
-          },
-          "403": { 
-            description: "Acesso negado", 
-            content: {
-              "application/json": {
-                schema: { $ref: "#/components/schemas/ErrorResponse" }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/auth/verify-admin": {
-      get: {
-        summary: "Verifica acesso de administrador",
-        security: [{ bearerAuth: [] }],
-        responses: {
-          "200": {
-            description: "Acesso permitido",
-            content: {
-              "application/json": {
-                schema: {
-                  type: "object",
-                  properties: {
-                    access: { type: "string", example: "granted" }
-                  }
-                }
-              }
-            }
-          },
-          "403": { 
-            description: "Acesso negado", 
-            content: {
-              "application/json": {
-                schema: { $ref: "#/components/schemas/ErrorResponse" }
-              }
-            }
-          }
-        }
-      }
-    },
-    
-    // API de Autenticação para Frontend Externo
-    "/api/auth/register": {
+    "/auth/register": {
       post: {
         summary: "Registrar novo usuário",
-        tags: ["Auth API"],
+        tags: ["Auth"],
         requestBody: {
           required: true,
           content: {
@@ -313,15 +216,14 @@ module.exports = {
             }
           },
           "400": { description: "Erro de validação" },
-          "403": { description: "Email não autorizado" },
-          "409": { description: "Usuário já existe" }
+          "403": { description: "Email não autorizado" }
         }
       }
     },
-    "/api/auth/login": {
+    "/auth/login": {
       post: {
         summary: "Login do usuário",
-        tags: ["Auth API"],
+        tags: ["Auth"],
         requestBody: {
           required: true,
           content: {
@@ -345,11 +247,10 @@ module.exports = {
         }
       }
     },
-    "/api/auth/verify": {
+    "/auth/verify": {
       post: {
         summary: "Verificar token de autenticação",
-        tags: ["Auth API"],
-        security: [{ bearerAuth: [] }],
+        tags: ["Auth"],
         requestBody: {
           required: true,
           content: {
@@ -364,11 +265,10 @@ module.exports = {
         }
       }
     },
-    "/api/auth/profile": {
+    "/auth/profile": {
       post: {
         summary: "Obter perfil do usuário",
-        tags: ["Auth API"],
-        security: [{ bearerAuth: [] }],
+        tags: ["Auth"],
         requestBody: {
           required: true,
           content: {
@@ -391,11 +291,10 @@ module.exports = {
         }
       }
     },
-    "/api/auth/update-profile": {
+    "/auth/update-profile": {
       put: {
         summary: "Atualizar perfil do usuário",
-        tags: ["Auth API"],
-        security: [{ bearerAuth: [] }],
+        tags: ["Auth"],
         requestBody: {
           required: true,
           content: {
@@ -427,12 +326,118 @@ module.exports = {
         }
       }
     },
-    "/api/auth/logout": {
+    "/auth/logout": {
       post: {
         summary: "Logout do usuário",
-        tags: ["Auth API"],
+        tags: ["Auth"],
         responses: {
           "200": { description: "Logout realizado com sucesso" }
+        }
+      }
+    },
+    "/auth/legacy-register": {
+      post: {
+        summary: "Registrar usuário (legado)",
+        tags: ["Auth"],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { "$ref": "#/components/schemas/RegisterRequest" }
+            }
+          }
+        },
+        responses: {
+          "201": { description: "Usuário registrado com sucesso" },
+          "400": { description: "Erro de validação" }
+        }
+      }
+    },
+    "/auth/legacy-login": {
+      post: {
+        summary: "Login do usuário (legado)",
+        tags: ["Auth"],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { "$ref": "#/components/schemas/LoginRequest" }
+            }
+          }
+        },
+        responses: {
+          "200": { description: "Login realizado com sucesso" },
+          "400": { description: "Token não fornecido" }
+        }
+      }
+    },
+    "/auth/verify-user": {
+      get: {
+        summary: "Verifica acesso de usuário comum",
+        tags: ["Auth"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "200": {
+            description: "Acesso permitido",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    authenticated: { type: "boolean" },
+                    user: { $ref: "#/components/schemas/Usuario" }
+                  }
+                }
+              }
+            }
+          },
+          "403": { description: "Acesso negado" }
+        }
+      }
+    },
+    "/auth/verify-admin": {
+      get: {
+        summary: "Verifica acesso de administrador",
+        tags: ["Auth"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "200": {
+            description: "Acesso permitido",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    authenticated: { type: "boolean" },
+                    admin: { type: "boolean" },
+                    user: { $ref: "#/components/schemas/Usuario" }
+                  }
+                }
+              }
+            }
+          },
+          "403": { description: "Acesso negado" }
+        }
+      }
+    },
+    "/auth/promote/{userId}": {
+      patch: {
+        summary: "Promover usuário a admin",
+        tags: ["Auth"],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "userId",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "ID do usuário a ser promovido"
+          }
+        ],
+        responses: {
+          "200": { description: "Usuário promovido com sucesso" },
+          "404": { description: "Usuário não encontrado" },
+          "403": { description: "Acesso negado" }
         }
       }
     },

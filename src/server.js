@@ -8,16 +8,16 @@ const swaggerDocument = require('../config/swagger');
 const firebaseCfg = require('./config/firebaseClient');
 const connectMongoDB = require('./config/mongodb');
 
-const authRoutes = require('./routes/authRoutes');
-const protectedRoutes = require('./routes/protectedRoutes');
 const mensagemRoutes = require('./routes/mensagemRoutes');
 const inscricaoRoutes = require('./routes/inscricaoRoutes');
 const esporteRoutes = require('./routes/esporteRoutes');
 const eventRoutes = require('./routes/eventRoutes');
-const apiAuthRoutes = require('./routes/apiAuthRoutes');
 const produtoRoutes = require('./routes/produtoRoutes');
 const cartRoutes = require('./routes/cartRoutes');
 const pedidoRoutes = require('./routes/pedidoRoutes');
+
+// Importar rotas de autenticação
+const authRoutes = require('./routes/authRoutes');
 
 const app = express();
 
@@ -60,9 +60,9 @@ app.get('/api/cors-test', (req, res) => {
   });
 });
 
-// Auth + Protected Routes
+// Auth Routes
 app.use('/auth', authRoutes);
-app.use('/auth', protectedRoutes);
+app.use('/api/auth', authRoutes);
 
 // 📄 Rotas HTML públicas de teste e dashboard
 app.use(express.static(path.join(__dirname, '../public')));
@@ -84,7 +84,6 @@ app.get('/user-dashboard', (req, res) => {
 });
 
 // 🏆 API Routes
-app.use('/api/auth', apiAuthRoutes);
 app.use('/api/esportes', esporteRoutes);
 app.use('/api/inscricoes', inscricaoRoutes);
 app.use('/api/mensagens', mensagemRoutes);
