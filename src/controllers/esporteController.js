@@ -1,4 +1,5 @@
 const esporteService = require('../services/esporteService');
+const uploadService = require('../services/uploadService');
 
 module.exports = {
   // Listar todos os esportes
@@ -10,18 +11,35 @@ module.exports = {
       console.error('Erro ao listar esportes:', err);
       res.status(500).json({ error: err.message });
     }
-  },
-
-  // Criar novo esporte (apenas admin)
+  },  // Criar novo esporte (apenas admin)
   async criarEsporte(req, res) {
     try {
       const { nome } = req.body;
+      let fotoUrl = undefined;
       
       if (!nome) {
         return res.status(400).json({ error: 'Nome do esporte é obrigatório.' });
       }
 
-      const esporte = await esporteService.criarEsporte(nome);
+      // Se há um arquivo de foto, fazer upload
+      if (req.file) {
+        try {
+          // Validar arquivo de imagem
+          uploadService.validateImageFile(req.file.originalname, req.file.size);
+          
+          // Upload usando o serviço centralizado
+          fotoUrl = await uploadService.uploadFile(
+            req.file.buffer, 
+            req.file.originalname, 
+            'esportes'
+          );
+        } catch (uploadErr) {
+          console.error('Erro ao fazer upload da imagem:', uploadErr.message);
+          return res.status(500).json({ error: 'Erro ao fazer upload da imagem', details: uploadErr.message });
+        }
+      }
+
+      const esporte = await esporteService.criarEsporte(nome, fotoUrl);
       res.status(201).json(esporte);
     } catch (err) {
       console.error('Erro ao criar esporte:', err);
@@ -34,18 +52,34 @@ module.exports = {
       res.status(500).json({ error: err.message });
     }
   },
-
   // Atualizar esporte existente (apenas admin)
   async atualizarEsporte(req, res) {
     try {
       const { id } = req.params;
       const { nome } = req.body;
+      let fotoUrl = undefined;
       
       if (!nome) {
         return res.status(400).json({ error: 'Nome do esporte é obrigatório.' });
+      }      // Se há um arquivo de foto, fazer upload
+      if (req.file) {
+        try {
+          // Validar arquivo de imagem
+          uploadService.validateImageFile(req.file.originalname, req.file.size);
+          
+          // Upload usando o serviço centralizado
+          fotoUrl = await uploadService.uploadFile(
+            req.file.buffer, 
+            req.file.originalname, 
+            'esportes'
+          );
+        } catch (uploadErr) {
+          console.error('Erro ao fazer upload da imagem:', uploadErr.message);
+          return res.status(500).json({ error: 'Erro ao fazer upload da imagem', details: uploadErr.message });
+        }
       }
 
-      const esporte = await esporteService.atualizarEsporte(id, nome);
+      const esporte = await esporteService.atualizarEsporte(id, nome, fotoUrl);
       res.json(esporte);
     } catch (err) {
       console.error('Erro ao atualizar esporte:', err);

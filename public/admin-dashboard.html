@@ -249,12 +249,12 @@
         </div>
       </div>
     </div>
-    
-    <div id="esportesTab" style="display:none">
+      <div id="esportesTab" style="display:none">
       <h2>Gerenciar Esportes</h2>
       <div class="card">
         <h3>Adicionar Novo Esporte</h3>
         <input type="text" id="novoEsporteNome" placeholder="Nome do esporte">
+        <input type="file" id="novoEsporteFoto" accept="image/*" placeholder="Foto do esporte (opcional)">
         <button onclick="adicionarEsporte()">Adicionar</button>
       </div>
       <div id="listaEsportes">
@@ -379,15 +379,21 @@
           selector.appendChild(option);
         });
         
-        
-        // Preencher a lista de esportes para gerenciamento
+          // Preencher a lista de esportes para gerenciamento
         const listaEsportes = document.getElementById('listaEsportes');
         listaEsportes.innerHTML = '';
         
         esportes.forEach(esporte => {
           const div = document.createElement('div');
           div.className = 'card';
+          
+          let fotoHtml = '';
+          if (esporte.fotoUrl) {
+            fotoHtml = `<img src="${esporte.fotoUrl}" alt="${esporte.nome}" style="max-width: 100px; max-height: 100px; margin-bottom: 10px; border-radius: 5px;">`;
+          }
+          
           div.innerHTML = `
+            ${fotoHtml}
             <h3>${esporte.nome}</h3>
             <button onclick="editarEsporte('${esporte.id}')">Editar</button>
             <button class="reject" onclick="removerEsporte('${esporte.id}')">Remover</button>
@@ -677,36 +683,45 @@
         console.error('Erro ao excluir mensagem:', err);
         alert(`Erro ao excluir mensagem: ${err.message}`);
       }
-    }
-
-    async function adicionarEsporte() {
+    }    async function adicionarEsporte() {
       try {
         const nome = document.getElementById('novoEsporteNome').value.trim();
+        const fotoInput = document.getElementById('novoEsporteFoto');
         
         if (!nome) {
           return alert('Por favor, digite um nome para o esporte.');
         }
         
         const token = await firebaseUser.getIdToken();
+        
+        // Criar FormData para enviar arquivo
+        const formData = new FormData();
+        formData.append('nome', nome);
+        
+        if (fotoInput.files[0]) {
+          formData.append('foto', fotoInput.files[0]);
+        }
+        
         const res = await fetch('/api/esportes', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`
           },
-          body: JSON.stringify({ nome })
+          body: formData
         });
         
         if (!res.ok) {
-          throw new Error('Falha ao adicionar esporte');
+          const errorData = await res.json();
+          throw new Error(errorData.error || 'Falha ao adicionar esporte');
         }
         
         document.getElementById('novoEsporteNome').value = '';
+        document.getElementById('novoEsporteFoto').value = '';
         alert('Esporte adicionado com sucesso!');
         await carregarEsportes();
       } catch (err) {
         console.error('Erro ao adicionar esporte:', err);
-        alert('Erro ao adicionar esporte.');
+        alert('Erro ao adicionar esporte: ' + err.message);
       }
     }
 

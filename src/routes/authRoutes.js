@@ -1,6 +1,3 @@
-// Arquivo mantido apenas para compatibilidade. Todas as rotas de autenticação foram unificadas em authRoutesUnified.js.
-// Utilize apenas o arquivo authRoutesUnified.js para novas implementações.
-
 const express = require('express');
 const router = express.Router();
 const verificarToken = require('../middlewares/verificarToken');

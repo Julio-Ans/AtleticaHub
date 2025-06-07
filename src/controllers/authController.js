@@ -1,9 +1,8 @@
 const admin = require('../config/firebaseAdmin');
 const authService = require('../services/authService');
 const userRepository = require('../repositories/userRepository');
-const adminService = require('../services/adminService');
 
-class ApiAuthController {
+class AuthController {
   /**
    * Registrar novo usuário via API
    */
@@ -49,7 +48,9 @@ class ApiAuthController {
           error: `Domínio "${domain}" não é autorizado`,
           message: 'Apenas emails institucionais são permitidos'
         });
-      }      // Processar código de convite
+      }
+      
+      // Processar código de convite
       let role = 'user';
       if (codigo) {
         const invite = await authService.verifyInviteCode(codigo);
@@ -72,9 +73,10 @@ class ApiAuthController {
       if (isNaN(dataNascimentoObj.getTime())) {
         return res.status(400).json({
           success: false,
-          error: 'Data de nascimento inválida'
-        });
-      }      // Salvar no banco
+          error: 'Data de nascimento inválida'        });
+      }
+      
+      // Salvar no banco
       const usuario = await userRepository.create({
         id: firebaseUser.uid,
         nome,
@@ -95,11 +97,9 @@ class ApiAuthController {
           telefone: usuario.telefone,
           curso: usuario.curso
         }
-      });
-
-    } catch (error) {
+      });    } catch (error) {
       console.error('Erro no registro:', error);
-      return ApiAuthController.handleError(res, error);
+      return AuthController.handleError(res, error);
     }
   }
 
@@ -115,29 +115,45 @@ class ApiAuthController {
           success: false,
           error: 'Token de autenticação é obrigatório'
         });
-      }
-
-      // Verificar token
+      }      // Verificar token
       const decodedToken = await admin.auth().verifyIdToken(idToken);
-      const uid = decodedToken.uid;      // Buscar usuário
-      const usuario = await userRepository.findById(uid);
+      const uid = decodedToken.uid;
+      
+      // Buscar usuário
+      let usuario = await userRepository.findById(uid);
 
+      // Se o usuário não existir no banco, criar automaticamente
       if (!usuario) {
-        return res.status(404).json({
-          success: false,
-          error: 'Usuário não encontrado no sistema'
-        });
-      }
-
-      res.status(200).json({
+        try {
+          // Buscar dados do usuário no Firebase
+          const firebaseUser = await admin.auth().getUser(decodedToken.uid);
+          
+          // Criar usuário no banco com dados mínimos
+          usuario = await userRepository.create({
+            id: decodedToken.uid,
+            nome: firebaseUser.displayName || firebaseUser.email || 'Usuário',
+            dataNascimento: new Date('1990-01-01'), // Data padrão
+            telefone: firebaseUser.phoneNumber || 'Não informado',
+            curso: 'Não informado',
+            role: 'user' // Padrão como usuário comum
+          });
+          
+          console.log(`Usuário criado automaticamente no login: ${usuario.nome} (${usuario.id})`);
+        } catch (createErr) {
+          console.error('Erro ao criar usuário no banco durante login:', createErr);
+          return res.status(500).json({
+            success: false,
+            error: 'Erro ao criar usuário no sistema.'
+          });
+        }
+      }      res.status(200).json({
         success: true,
         message: 'Login realizado com sucesso',
-        user: usuario
-      });
-
-    } catch (error) {
+        user: usuario,
+        role: usuario.role // Adicionar role diretamente para o frontend
+      });} catch (error) {
       console.error('Erro no login:', error);
-      return ApiAuthController.handleError(res, error);
+      return AuthController.handleError(res, error);
     }
   }
 
@@ -186,10 +202,10 @@ class ApiAuthController {
           success: false,
           error: 'Token é obrigatório'
         });
-      }
-
-      const decodedToken = await admin.auth().verifyIdToken(idToken);
-      const uid = decodedToken.uid;      const usuario = await userRepository.findById(uid);
+      }      const decodedToken = await admin.auth().verifyIdToken(idToken);
+      const uid = decodedToken.uid;
+      
+      const usuario = await userRepository.findById(uid);
 
       if (!usuario) {
         return res.status(404).json({
@@ -201,11 +217,9 @@ class ApiAuthController {
       res.status(200).json({
         success: true,
         user: usuario
-      });
-
-    } catch (error) {
+      });    } catch (error) {
       console.error('Erro ao buscar perfil:', error);
-      return ApiAuthController.handleError(res, error);
+      return AuthController.handleError(res, error);
     }
   }
 
@@ -237,17 +251,17 @@ class ApiAuthController {
           success: false,
           error: 'Nenhum campo para atualizar foi fornecido'
         });
-      }      const usuario = await userRepository.update(uid, updateData);
+      }
+      
+      const usuario = await userRepository.update(uid, updateData);
 
       res.status(200).json({
         success: true,
         message: 'Perfil atualizado com sucesso',
         user: usuario
-      });
-
-    } catch (error) {
+      });    } catch (error) {
       console.error('Erro ao atualizar perfil:', error);
-      return ApiAuthController.handleError(res, error);
+      return AuthController.handleError(res, error);
     }
   }
 
@@ -322,4 +336,4 @@ class ApiAuthController {
   }
 }
 
-module.exports = ApiAuthController;
+module.exports = AuthController;

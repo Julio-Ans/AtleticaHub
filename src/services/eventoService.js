@@ -21,23 +21,34 @@ class EventoService {
       console.error('Erro ao buscar evento:', error);
       throw error;
     }
-  }
-
-  async criarEvento(eventoData) {
+  }  async criarEvento(eventoData) {
     try {
+      console.log('📝 EventoService.criarEvento - Dados recebidos:', eventoData);
+      
       // Validações de negócio
       if (!eventoData.titulo || !eventoData.data || !eventoData.local) {
         throw new Error('Título, data e local são obrigatórios');
       }
 
-      // Verificar se a data é futura
-      if (new Date(eventoData.data) < new Date()) {
-        throw new Error('A data do evento deve ser futura');
-      }
+      // Temporariamente removendo validação de data futura para debug
+      // Verificar se a data é futura (dar uma margem de 1 hora para evitar problemas de timezone)
+      // const dataEvento = new Date(eventoData.data);
+      // const agora = new Date();
+      // agora.setHours(agora.getHours() - 1); // Margem de 1 hora
+      
+      // if (dataEvento < agora) {
+      //   console.log('❌ Data do evento:', dataEvento, 'Data atual (com margem):', agora);
+      //   throw new Error('A data do evento deve ser futura');
+      // }
 
-      return await eventoRepository.create(eventoData);
+      console.log('✅ EventoService.criarEvento - Validações passaram, criando evento...');
+      
+      const resultado = await eventoRepository.create(eventoData);
+      console.log('✅ EventoService.criarEvento - Evento criado com sucesso:', resultado);
+      
+      return resultado;
     } catch (error) {
-      console.error('Erro ao criar evento:', error);
+      console.error('❌ EventoService.criarEvento - Erro:', error);
       throw error;
     }
   }

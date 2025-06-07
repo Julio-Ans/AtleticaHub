@@ -1,55 +1,5 @@
 const eventoService = require('../services/eventoService');
-const { Storage } = require('@google-cloud/storage');
-const path = require('path');
-const admin = require('../config/firebaseAdmin');
-const serviceAccount = require('../config/firebase-service-account.json');
-
-// Configuração do Google Cloud Storage
-const storage = new Storage({
-  projectId: serviceAccount.project_id,
-  credentials: {
-    client_email: serviceAccount.client_email,
-    private_key: serviceAccount.private_key
-  }
-});
-// Firebase Storage bucket name format
-const projectId = serviceAccount.project_id;
-const bucketName = `${projectId}.appspot.com`;
-
-// Verificar se o bucket existe e usar o correto
-let bucket;
-async function initializeBucket() {
-  try {
-    bucket = storage.bucket(bucketName);
-    const [exists] = await bucket.exists();
-    
-    if (!exists) {
-      // Tentar com o bucket padrão do Firebase Storage
-      const firebaseBucketName = `${projectId}.firebasestorage.app`;
-      bucket = storage.bucket(firebaseBucketName);
-      const [firebaseExists] = await bucket.exists();
-      
-      if (firebaseExists) {
-        global.bucketName = firebaseBucketName;
-      }
-    }
-  } catch (err) {
-    // Fallback para o bucket Firebase Storage
-    const firebaseBucketName = `${projectId}.firebasestorage.app`;
-    try {
-      bucket = storage.bucket(firebaseBucketName);
-      const [exists] = await bucket.exists();
-      if (exists) {
-        global.bucketName = firebaseBucketName;
-      }
-    } catch (firebaseErr) {
-      console.error('Erro ao conectar com Firebase Storage:', firebaseErr);
-    }
-  }
-}
-
-// Inicializar o bucket
-initializeBucket();
+const uploadService = require('../services/uploadService');
 
 module.exports = {  // Listar todos os eventos
   async listar(req, res) {
@@ -63,42 +13,42 @@ module.exports = {  // Listar todos os eventos
   },  // Criar evento (admin)
   async criar(req, res) {
     try {
+      console.log('📝 EventoController.criar - Body recebido:', req.body);
+      console.log('📝 EventoController.criar - Arquivo recebido:', req.file ? 'SIM' : 'NÃO');
+      console.log('📝 EventoController.criar - User:', req.user ? req.user.uid : 'NÃO ENCONTRADO');
+      
       const { titulo, descricao, tipo, data, local } = req.body;
       const criadorId = req.user.uid;
       let fotoUrl = undefined;
-        
+
+      console.log('📝 Campos extraídos:', { titulo, descricao, tipo, data, local, criadorId });
+
+      // Validações básicas (mesmo padrão do esporteController)
+      if (!titulo || !data || !local) {
+        console.log('❌ Validação falhou - campos obrigatórios:', { titulo: !!titulo, data: !!data, local: !!local });
+        return res.status(400).json({ error: 'Título, data e local são obrigatórios.' });
+      }
+
+      // Se há um arquivo de foto, fazer upload
       if (req.file) {
         try {
-          // Upload para o Firebase Storage
-          const ext = path.extname(req.file.originalname);
-          const filename = `eventos/${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`;
+          // Validar arquivo de imagem
+          uploadService.validateImageFile(req.file.originalname, req.file.size);
           
-          // Use the global bucket name if it was updated during initialization
-          const currentBucketName = global.bucketName || bucketName;
-          
-          const file = bucket.file(filename);
-          
-          // Salvando o arquivo no bucket
-          await file.save(req.file.buffer, {
-            contentType: req.file.mimetype,
-            public: true,
-            metadata: { cacheControl: 'public, max-age=31536000' }
-          });
-          
-          // Generate a signed URL (authenticated access)
-          const [url] = await file.getSignedUrl({
-            action: 'read',
-            expires: '03-01-2500', // A very long expiration
-          });
-          
-          fotoUrl = url;
+          // Upload usando o serviço centralizado
+          fotoUrl = await uploadService.uploadFile(
+            req.file.buffer, 
+            req.file.originalname, 
+            'eventos'
+          );
+          console.log('✅ Upload da imagem realizado:', fotoUrl);
         } catch (uploadErr) {
-          console.error('Erro ao fazer upload da imagem:', uploadErr.message);
+          console.error('❌ Erro ao fazer upload da imagem:', uploadErr.message);
           return res.status(500).json({ error: 'Erro ao fazer upload da imagem', details: uploadErr.message });
         }
       }
       
-      const evento = await eventoService.criarEvento({ 
+      const dadosEvento = { 
         titulo, 
         descricao, 
         tipo, 
@@ -106,11 +56,23 @@ module.exports = {  // Listar todos os eventos
         local, 
         criadorId, 
         fotoUrl 
-      });
+      };
+      
+      console.log('📝 Dados que serão enviados para o service:', dadosEvento);
+      
+      const evento = await eventoService.criarEvento(dadosEvento);
+      console.log('✅ Evento criado com sucesso:', evento);
+      
       res.status(201).json(evento);
     } catch (err) {
-      console.error('Erro ao criar evento:', err);
-      res.status(400).json({ error: 'Erro ao criar evento', details: err.message });
+      console.error('❌ EventoController.criar - Erro:', err);
+      
+      // Tratamento especializado para erros de validação (mesmo padrão do esporteController)
+      if (err.message.includes('obrigatórios') || err.message.includes('futura')) {
+        return res.status(400).json({ error: err.message });
+      }
+      
+      res.status(500).json({ error: err.message });
     }
   },
   // Editar evento (admin)

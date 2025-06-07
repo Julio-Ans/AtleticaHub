@@ -16,8 +16,7 @@ module.exports = {  async listarEsportes() {
       throw new Error('Falha ao listar esportes');
     }
   },
-
-  async criarEsporte(nome) {
+  async criarEsporte(nome, fotoUrl = null) {
     try {
       // Validações de negócio
       if (!nome || nome.trim() === '') {
@@ -30,14 +29,18 @@ module.exports = {  async listarEsportes() {
         throw new Error('Já existe um esporte com este nome');
       }
       
-      return await esporteRepository.create({ nome });
+      const data = { nome };
+      if (fotoUrl) {
+        data.fotoUrl = fotoUrl;
+      }
+      
+      return await esporteRepository.create(data);
     } catch (error) {
       console.error('Erro ao criar esporte:', error);
       throw error;
     }
   },
-
-  async atualizarEsporte(id, nome) {
+  async atualizarEsporte(id, nome, fotoUrl = null) {
     try {
       // Validações
       if (!nome || nome.trim() === '') {
@@ -57,7 +60,12 @@ module.exports = {  async listarEsportes() {
         throw new Error('Já existe outro esporte com este nome');
       }
       
-      return await esporteRepository.update(id, { nome });
+      const updateData = { nome };
+      if (fotoUrl) {
+        updateData.fotoUrl = fotoUrl;
+      }
+      
+      return await esporteRepository.update(id, updateData);
     } catch (error) {
       console.error('Erro ao atualizar esporte:', error);
       throw error;

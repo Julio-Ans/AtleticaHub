@@ -8,10 +8,17 @@ class EventoRepository {
   async findById(id) {
     return await Evento.findById(id);
   }
-
   async create(eventoData) {
-    const evento = new Evento(eventoData);
-    return await evento.save();
+    try {
+      console.log('📝 EventoRepository.create - Criando evento no MongoDB:', eventoData);
+      const evento = new Evento(eventoData);
+      const resultado = await evento.save();
+      console.log('✅ EventoRepository.create - Evento salvo no MongoDB:', resultado);
+      return resultado;
+    } catch (error) {
+      console.error('❌ EventoRepository.create - Erro ao salvar no MongoDB:', error);
+      throw error;
+    }
   }
 
   async update(id, updateData) {

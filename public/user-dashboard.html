@@ -487,12 +487,18 @@
           option.value = esporte.id;
           option.textContent = esporte.nome;
           seletor.appendChild(option);
-          
-          // Adicionar card do esporte
+            // Adicionar card do esporte
           const div = document.createElement('div');
           div.className = 'card esporte-card';
+          
+          let fotoHtml = '';
+          if (esporte.fotoUrl) {
+            fotoHtml = `<img src="${esporte.fotoUrl}" alt="${esporte.nome}" style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 5px; margin-bottom: 10px;">`;
+          }
+          
           div.innerHTML = `
             <div>
+              ${fotoHtml}
               <h3>${esporte.nome}</h3>
             </div>
             <button class="primary" onclick="inscreverEsporte('${esporte.id}')">Inscrever-se</button>
