@@ -6,6 +6,7 @@ const eventoSchema = new mongoose.Schema({
   tipo: { type: String, required: true }, // treino, festa, etc
   data: { type: Date, required: true },
   local: { type: String, required: true },
+  esporteId: { type: String, required: true }, // ID do esporte associado (usa "0" para eventos gerais)
   criadoEm: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
   criadorId: { type: String, required: true }, // UID do admin

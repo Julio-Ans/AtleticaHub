@@ -1,4 +1,5 @@
 const eventoService = require('../services/eventoService');
+const inscricaoService = require('../services/inscricaoService');
 const uploadService = require('../services/uploadService');
 
 module.exports = {  // Listar todos os eventos
@@ -16,17 +17,16 @@ module.exports = {  // Listar todos os eventos
       console.log('📝 EventoController.criar - Body recebido:', req.body);
       console.log('📝 EventoController.criar - Arquivo recebido:', req.file ? 'SIM' : 'NÃO');
       console.log('📝 EventoController.criar - User:', req.user ? req.user.uid : 'NÃO ENCONTRADO');
-      
-      const { titulo, descricao, tipo, data, local } = req.body;
+        const { titulo, descricao, tipo, data, local, esporteId } = req.body;
       const criadorId = req.user.uid;
       let fotoUrl = undefined;
 
-      console.log('📝 Campos extraídos:', { titulo, descricao, tipo, data, local, criadorId });
+      console.log('📝 Campos extraídos:', { titulo, descricao, tipo, data, local, esporteId, criadorId });
 
       // Validações básicas (mesmo padrão do esporteController)
-      if (!titulo || !data || !local) {
-        console.log('❌ Validação falhou - campos obrigatórios:', { titulo: !!titulo, data: !!data, local: !!local });
-        return res.status(400).json({ error: 'Título, data e local são obrigatórios.' });
+      if (!titulo || !data || !local || !esporteId) {
+        console.log('❌ Validação falhou - campos obrigatórios:', { titulo: !!titulo, data: !!data, local: !!local, esporteId: !!esporteId });
+        return res.status(400).json({ error: 'Título, data, local e esporte são obrigatórios.' });
       }
 
       // Se há um arquivo de foto, fazer upload
@@ -47,13 +47,13 @@ module.exports = {  // Listar todos os eventos
           return res.status(500).json({ error: 'Erro ao fazer upload da imagem', details: uploadErr.message });
         }
       }
-      
-      const dadosEvento = { 
+        const dadosEvento = { 
         titulo, 
         descricao, 
         tipo, 
         data, 
         local, 
+        esporteId,
         criadorId, 
         fotoUrl 
       };
@@ -120,13 +120,35 @@ module.exports = {  // Listar todos os eventos
       }
       res.status(400).json({ error: 'Erro ao buscar evento', details: err.message });
     }
-  },
-  // Inscrever usuário em evento
+  },  // Inscrever usuário em evento
   async inscrever(req, res) {
     try {
       const { id } = req.params;
       const { nome, email } = req.user;
       const usuarioId = req.user.uid;
+      
+      // Buscar o evento para verificar o esporte associado
+      const evento = await eventoService.buscarEventoPorId(id);
+      if (!evento) {
+        return res.status(404).json({ error: 'Evento não encontrado' });
+      }
+      
+      // Verificar se o usuário tem permissão para se inscrever
+      // - Se for evento geral (esporteId = "0"), qualquer um pode se inscrever
+      // - Se for admin, pode se inscrever em qualquer evento
+      // - Se for usuário comum, precisa estar inscrito no esporte do evento
+      if (evento.esporteId !== "0" && req.user.role !== 'admin') {
+        const inscricoes = await inscricaoService.listarPorUsuario(usuarioId);
+        const inscricaoAceita = inscricoes.find(
+          inscricao => inscricao.esporteId === evento.esporteId && inscricao.status === 'aceito'
+        );
+        
+        if (!inscricaoAceita) {
+          return res.status(403).json({ 
+            error: 'Você precisa estar inscrito no esporte associado a este evento para poder se inscrever.' 
+          });
+        }
+      }
       
       await eventoService.inscreverUsuario(id, { usuarioId, nome, email });
       res.status(201).json({ message: 'Inscrição realizada com sucesso' });
@@ -169,5 +191,17 @@ module.exports = {  // Listar todos os eventos
       console.error('Erro ao listar eventos inscritos:', err);
       res.status(400).json({ error: 'Erro ao listar eventos inscritos', details: err.message });
     }
-  }
+  },
+
+  // Listar eventos por esporte
+  async listarPorEsporte(req, res) {
+    try {
+      const { esporteId } = req.params;
+      const eventos = await eventoService.listarEventosPorEsporte(esporteId);
+      res.json(eventos);
+    } catch (err) {
+      console.error('Erro ao listar eventos por esporte:', err);
+      res.status(400).json({ error: 'Erro ao listar eventos por esporte', details: err.message });
+    }
+  },
 };

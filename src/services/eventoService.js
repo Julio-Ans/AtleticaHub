@@ -26,8 +26,8 @@ class EventoService {
       console.log('📝 EventoService.criarEvento - Dados recebidos:', eventoData);
       
       // Validações de negócio
-      if (!eventoData.titulo || !eventoData.data || !eventoData.local) {
-        throw new Error('Título, data e local são obrigatórios');
+      if (!eventoData.titulo || !eventoData.data || !eventoData.local || !eventoData.esporteId) {
+        throw new Error('Título, data, local e esporte são obrigatórios');
       }
 
       // Temporariamente removendo validação de data futura para debug
@@ -166,6 +166,15 @@ class EventoService {
     } catch (error) {
       console.error('Erro ao listar eventos próximos:', error);
       throw new Error('Falha ao listar eventos próximos');
+    }
+  }
+
+  async listarEventosPorEsporte(esporteId) {
+    try {
+      return await eventoRepository.findByEsporte(esporteId);
+    } catch (error) {
+      console.error('Erro ao listar eventos por esporte:', error);
+      throw new Error('Falha ao listar eventos por esporte');
     }
   }
 }

@@ -162,8 +162,7 @@ module.exports = {
         properties: {
           error: { type: "string" }
         }
-      },
-      Evento: {
+      },      Evento: {
         type: "object",
         properties: {
           _id: { type: "string" },
@@ -172,6 +171,7 @@ module.exports = {
           tipo: { type: "string" },
           data: { type: "string", format: "date-time" },
           local: { type: "string" },
+          esporteId: { type: "string", description: "ID do esporte ao qual o evento pertence. Use '0' para eventos gerais." },
           criadoEm: { type: "string", format: "date-time" },
           updatedAt: { type: "string", format: "date-time" },
           criadorId: { type: "string" },
@@ -188,7 +188,7 @@ module.exports = {
             }
           }
         },
-        required: ["titulo", "tipo", "data", "local", "criadorId"]
+        required: ["titulo", "tipo", "data", "local", "criadorId", "esporteId"]
       }
     }
   },
@@ -1220,15 +1220,15 @@ module.exports = {
           content: {
             "application/json": {
               schema: {
-                type: "object",
-                properties: {
+                type: "object",                properties: {
                   titulo: { type: "string" },
                   descricao: { type: "string" },
                   tipo: { type: "string" },
                   data: { type: "string", format: "date-time" },
-                  local: { type: "string" }
+                  local: { type: "string" },
+                  esporteId: { type: "string", description: "ID do esporte ao qual o evento pertence. Use '0' para eventos gerais." }
                 },
-                required: ["titulo", "tipo", "data", "local"]
+                required: ["titulo", "tipo", "data", "local", "esporteId"]
               }
             }
           }
@@ -1275,13 +1275,13 @@ module.exports = {
           content: {
             "application/json": {
               schema: {
-                type: "object",
-                properties: {
+                type: "object",                properties: {
                   titulo: { type: "string" },
                   descricao: { type: "string" },
                   tipo: { type: "string" },
                   data: { type: "string", format: "date-time" },
-                  local: { type: "string" }
+                  local: { type: "string" },
+                  esporteId: { type: "string", description: "ID do esporte ao qual o evento pertence. Use '0' para eventos gerais." }
                 }
               }
             }
@@ -1329,8 +1329,7 @@ module.exports = {
           "404": { description: "Inscrição não encontrada ou evento não encontrado" }
         }
       }
-    },
-    "/api/eventos/minhas/inscricoes": {
+    },    "/api/eventos/minhas/inscricoes": {
       get: {
         summary: "Listar eventos em que o usuário está inscrito",
         security: [{ bearerAuth: [] }],
@@ -1343,6 +1342,25 @@ module.exports = {
               }
             }
           }
+        }
+      }
+    },
+    "/api/eventos/esporte/{esporteId}": {
+      get: {
+        summary: "Listar eventos por esporte",
+        parameters: [
+          { name: "esporteId", in: "path", required: true, schema: { type: "string" }, description: "ID do esporte" }
+        ],
+        responses: {
+          "200": {
+            description: "Lista de eventos do esporte",
+            content: {
+              "application/json": {
+                schema: { type: "array", items: { $ref: "#/components/schemas/Evento" } }
+              }
+            }
+          },
+          "400": { description: "Erro ao buscar eventos" }
         }
       }
     },

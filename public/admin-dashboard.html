@@ -265,11 +265,17 @@
     <div id="eventosTab" style="display:none">
       <h2>Gerenciar Eventos</h2>
       <div class="card">
-        <h3>Criar Novo Evento</h3>
-        <div class="form-group">
+        <h3>Criar Novo Evento</h3>        <div class="form-group">
           <input type="text" id="eventoTitulo" class="form-control" placeholder="Título do evento">
           <input type="text" id="eventoDescricao" class="form-control" placeholder="Descrição (opcional)">
-          <input type="text" id="eventoTipo" class="form-control" placeholder="Tipo (treino, festa, etc)">
+          <select id="eventoTipo" class="form-control" style="margin-bottom: 10px;" onchange="mostrarSubopcoes()">
+            <option value="">Selecione o tipo de evento...</option>
+            <option value="geral">Geral</option>
+            <option value="treino">Treino</option>
+          </select>
+          <select id="eventoSubtipo" class="form-control" style="margin-bottom: 10px; display: none;">
+            <option value="">Selecione...</option>
+          </select>
           <input type="datetime-local" id="eventoData" class="form-control" placeholder="Data e hora">
           <input type="text" id="eventoLocal" class="form-control" placeholder="Local">
           <input type="file" id="eventoFoto" class="form-control" accept="image/*">
@@ -299,9 +305,7 @@
           }
           
           firebaseUser = user;
-          const verificado = await verificarAcessoAdmin();
-          
-          if (verificado) {
+          const verificado = await verificarAcessoAdmin();          if (verificado) {
             await carregarEsportes();
             await carregarEsportesParaMensagens();
             await mudarEsporteMensagens("0");
@@ -399,10 +403,77 @@
             <button class="reject" onclick="removerEsporte('${esporte.id}')">Remover</button>
           `;
           listaEsportes.appendChild(div);
-        });
-      } catch (err) {
+        });      } catch (err) {
         console.error('Erro ao carregar esportes:', err);
         alert('Erro ao carregar a lista de esportes.');
+      }
+    }
+
+    function mostrarSubopcoes() {
+      const tipoSelect = document.getElementById('eventoTipo');
+      const subtipoSelect = document.getElementById('eventoSubtipo');
+      const tipoSelecionado = tipoSelect.value;
+      
+      // Limpar opções anteriores
+      subtipoSelect.innerHTML = '<option value="">Selecione...</option>';
+      
+      if (tipoSelecionado === 'geral') {
+        // Mostrar subtipos para eventos gerais
+        subtipoSelect.style.display = 'block';
+        const subtiposGerais = [
+          { value: 'reuniao', text: 'Reunião' },
+          { value: 'festa', text: 'Festa' },
+          { value: 'confraternizacao', text: 'Confraternização' },
+          { value: 'palestra', text: 'Palestra' },
+          { value: 'workshop', text: 'Workshop' },
+          { value: 'assembleia', text: 'Assembleia' },
+          { value: 'outro', text: 'Outro' }
+        ];
+        
+        subtiposGerais.forEach(subtipo => {
+          const option = document.createElement('option');
+          option.value = subtipo.value;
+          option.textContent = subtipo.text;
+          subtipoSelect.appendChild(option);
+        });
+        
+      } else if (tipoSelecionado === 'treino') {
+        // Mostrar esportes para treinos
+        subtipoSelect.style.display = 'block';
+        carregarEsportesParaTreino();
+        
+      } else {
+        // Esconder subtipo se nenhum tipo foi selecionado
+        subtipoSelect.style.display = 'none';
+      }
+    }
+
+    async function carregarEsportesParaTreino() {
+      try {
+        const token = await firebaseUser.getIdToken();
+        const res = await fetch('/api/esportes', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (!res.ok) {
+          throw new Error('Falha ao carregar esportes');
+        }
+        
+        const esportes = await res.json();
+        const subtipoSelect = document.getElementById('eventoSubtipo');
+        
+        // Limpar e adicionar esportes
+        subtipoSelect.innerHTML = '<option value="">Selecione o esporte...</option>';
+        
+        esportes.forEach(esporte => {
+          const option = document.createElement('option');
+          option.value = esporte.id;
+          option.textContent = esporte.nome;
+          subtipoSelect.appendChild(option);
+        });
+        
+      } catch (err) {
+        console.error('Erro ao carregar esportes para treino:', err);
       }
     }
 
@@ -874,49 +945,67 @@
       } catch (err) {
         document.getElementById('listaEventosAdmin').innerHTML = '<p>Erro ao carregar eventos.</p>';
       }
-    }
-
-    async function criarEvento() {
+    }    async function criarEvento() {
       try {
         const titulo = document.getElementById('eventoTitulo').value.trim();
         const descricao = document.getElementById('eventoDescricao').value.trim();
-        const tipo = document.getElementById('eventoTipo').value.trim();
+        const tipoEvento = document.getElementById('eventoTipo').value;
+        const subtipo = document.getElementById('eventoSubtipo').value;
         const data = document.getElementById('eventoData').value;
         const local = document.getElementById('eventoLocal').value.trim();
         const foto = document.getElementById('eventoFoto').files[0];
         
-        if (!titulo || !tipo || !data || !local) {
+        if (!titulo || !tipoEvento || !subtipo || !data || !local) {
           return alert('Preencha todos os campos obrigatórios!');
         }
+        
+        // Determinar tipo e esporteId baseado na seleção
+        let tipo, esporteId;
+        
+        if (tipoEvento === 'geral') {
+          tipo = subtipo; // reuniao, festa, etc.
+          esporteId = '0'; // Eventos gerais têm esporteId = 0
+        } else if (tipoEvento === 'treino') {
+          tipo = 'treino';
+          esporteId = subtipo; // ID do esporte selecionado
+        }
+        
         const token = await firebaseUser.getIdToken();
         const formData = new FormData();
         formData.append('titulo', titulo);
         formData.append('descricao', descricao);
         formData.append('tipo', tipo);
+        formData.append('esporteId', esporteId);
         formData.append('data', data);
         formData.append('local', local);
         if (foto) {
           formData.append('foto', foto);
         }
+        
         const res = await fetch('/api/eventos', {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
           body: formData
         });
+        
         if (!res.ok) {
-          throw new Error('Erro ao criar evento');
+          const errorData = await res.json();
+          throw new Error(errorData.error || 'Erro ao criar evento');
         }
         
-        alert('Evento criado!');
+        alert('Evento criado com sucesso!');
         document.getElementById('eventoTitulo').value = '';
         document.getElementById('eventoDescricao').value = '';
         document.getElementById('eventoTipo').value = '';
+        document.getElementById('eventoSubtipo').value = '';
+        document.getElementById('eventoSubtipo').style.display = 'none';
         document.getElementById('eventoData').value = '';
         document.getElementById('eventoLocal').value = '';
         document.getElementById('eventoFoto').value = '';
         await carregarEventosAdmin();
       } catch (err) {
-        alert('Erro ao criar evento.');
+        console.error('Erro ao criar evento:', err);
+        alert(`Erro ao criar evento: ${err.message}`);
       }
     }
 

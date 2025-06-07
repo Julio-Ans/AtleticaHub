@@ -13,6 +13,8 @@ const upload = multer({ storage });
 
 // Listar todos os eventos (aberto)
 router.get('/', eventoController.listar);
+// Listar eventos por esporte
+router.get('/esporte/:esporteId', eventoController.listarPorEsporte);
 // Buscar evento por ID
 router.get('/:id', eventoController.buscar);
 

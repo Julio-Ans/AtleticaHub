@@ -169,29 +169,44 @@ GET /api/events
 ```json
 [
   {
-    "id": 1,
+    "_id": "60f1b2a3c4e5f6a7b8c9d0e1",
     "titulo": "Campeonato de Futebol",
     "descricao": "Torneio interno",
-    "dataEvento": "2024-12-31T00:00:00.000Z",
+    "tipo": "campeonato",
+    "data": "2024-12-31T00:00:00.000Z",
     "local": "Quadra Principal",
-    "foto": "base64-encoded-image",
+    "esporteId": "1",
+    "criadorId": "admin123",
+    "fotoUrl": "https://storage.googleapis.com/...",
     "inscricoes": [
       {
-        "usuario": {
-          "nome": "João Silva"
-        }
+        "usuarioId": "user123",
+        "nome": "João Silva",
+        "email": "joao@example.com",
+        "dataInscricao": "2024-01-01T00:00:00.000Z"
       }
     ]
   }
 ]
 ```
 
-### 2. Buscar Evento por ID
+### 2. Listar Eventos por Esporte
+```javascript
+GET /api/events/esporte/:esporteId
+```
+
+**Exemplo:**
+```javascript
+GET /api/events/esporte/1  // Eventos do esporte com ID 1
+GET /api/events/esporte/0  // Eventos gerais
+```
+
+### 3. Buscar Evento por ID
 ```javascript
 GET /api/events/:id
 ```
 
-### 3. Criar Evento (Admin apenas)
+### 4. Criar Evento (Admin apenas)
 ```javascript
 POST /api/events
 Authorization: Bearer <token>
@@ -199,12 +214,14 @@ Content-Type: multipart/form-data
 
 titulo: "Novo Evento"
 descricao: "Descrição do evento"
-dataEvento: "2024-12-31"
+tipo: "treino" // treino, campeonato, festa, etc.
+data: "2024-12-31T18:00:00Z"
 local: "Local do evento"
-foto: [arquivo de imagem]
+esporteId: "1" // ID do esporte (use "0" para eventos gerais)
+foto: [arquivo de imagem - opcional]
 ```
 
-### 4. Atualizar Evento (Admin apenas)
+### 5. Atualizar Evento (Admin apenas)
 ```javascript
 PUT /api/events/:id
 Authorization: Bearer <token>
@@ -213,30 +230,48 @@ Content-Type: application/json
 {
   "titulo": "Evento Atualizado",
   "descricao": "Nova descrição",
-  "dataEvento": "2024-12-31",
+  "data": "2024-12-31T18:00:00Z",
   "local": "Novo local"
 }
 ```
 
-### 5. Excluir Evento (Admin apenas)
+### 6. Excluir Evento (Admin apenas)
 ```javascript
 DELETE /api/events/:id
 Authorization: Bearer <token>
 ```
 
-### 6. Inscrever-se em Evento
+### 7. Inscrever-se em Evento
 ```javascript
 POST /api/events/:id/inscrever
 Authorization: Bearer <token>
 ```
 
-### 7. Cancelar Inscrição em Evento
+**⚠️ Regras de Validação:**
+- Para eventos gerais (`esporteId = "0"`): Qualquer usuário pode se inscrever
+- Para eventos de esportes específicos: Usuário deve estar inscrito **E aceito** no esporte
+- Administradores podem se inscrever em qualquer evento
+
+**Possíveis respostas de erro:**
+```json
+// Erro 403 - Não inscrito no esporte
+{
+  "error": "Você precisa estar inscrito no esporte associado a este evento para poder se inscrever."
+}
+
+// Erro 400 - Já inscrito
+{
+  "error": "Usuário já está inscrito neste evento"
+}
+```
+
+### 8. Cancelar Inscrição em Evento
 ```javascript
 DELETE /api/events/:id/inscrever
 Authorization: Bearer <token>
 ```
 
-### 8. Meus Eventos
+### 9. Meus Eventos
 ```javascript
 GET /api/events/minhas/inscricoes
 Authorization: Bearer <token>
@@ -780,10 +815,14 @@ class EventosService extends AtleticaHubAPI {
       method: 'DELETE'
     });
   }
-
   // Meus eventos
   async meusEventos() {
     return this.request('/api/events/minhas/inscricoes');
+  }
+
+  // Listar eventos por esporte
+  async listarEventosPorEsporte(esporteId) {
+    return this.request(`/api/events/esporte/${esporteId}`, { auth: false });
   }
 }
 
