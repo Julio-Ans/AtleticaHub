@@ -21,9 +21,14 @@ async function criarPedido(req, res) {
 async function listarPedidosUsuario(req, res) {
   try {
     const usuarioId = req.user.uid;
+    console.log('🔍 Controller - Buscando pedidos para usuário:', usuarioId);
+    
     const pedidos = await pedidoService.listarPedidosUsuario(usuarioId);
+    console.log('✅ Controller - Pedidos retornados:', pedidos.length);
+    
     res.status(200).json(pedidos);
   } catch (err) {
+    console.error('❌ Controller - Erro ao listar pedidos:', err);
     res.status(500).json({ error: err.message });
   }
 }

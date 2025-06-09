@@ -16,8 +16,7 @@ module.exports = {
         bearerFormat: "JWT"
       }
     },
-    schemas: {
-      Produto: {
+    schemas: {      Produto: {
         type: "object",
         properties: {
           id: { type: "integer" },
@@ -25,6 +24,7 @@ module.exports = {
           descricao: { type: "string" },
           preco: { type: "number", format: "float" },
           estoque: { type: "integer" },
+          imagemUrl: { type: "string", description: "URL da imagem do produto" },
           createdAt: { type: "string", format: "date-time" },
           updatedAt: { type: "string", format: "date-time" }
         },
@@ -73,12 +73,12 @@ module.exports = {
           createdAt: { type: "string", format: "date-time" }
         },
         required: ["nome", "dataNascimento", "telefone", "curso"]
-      },
-      Esporte: {
+      },      Esporte: {
         type: "object",
         properties: {
           id: { type: "string" },
           nome: { type: "string" },
+          fotoUrl: { type: "string", description: "URL da foto do esporte" },
           criadoEm: { type: "string", format: "date-time" }
         },
         required: ["nome"]
@@ -161,14 +161,14 @@ module.exports = {
           error: { type: "string" }
         }
       },      Evento: {
-        type: "object",
-        properties: {
+        type: "object",        properties: {
           _id: { type: "string" },
           titulo: { type: "string" },
           descricao: { type: "string" },
           tipo: { type: "string" },
           data: { type: "string", format: "date-time" },
           local: { type: "string" },
+          fotoUrl: { type: "string", description: "URL da foto do evento" },
           esporteId: { type: "string", description: "ID do esporte ao qual o evento pertence. Use '0' para eventos gerais." },
           criadoEm: { type: "string", format: "date-time" },
           updatedAt: { type: "string", format: "date-time" },
@@ -420,18 +420,22 @@ module.exports = {
           },
           "401": { description: "Não autorizado" }
         }
-      },
-      post: {
+      },      post: {
         summary: "Criar novo esporte",
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
           content: {
-            "application/json": {
+            "multipart/form-data": {
               schema: {
                 type: "object",
                 properties: {
-                  nome: { type: "string" }
+                  nome: { type: "string" },
+                  foto: { 
+                    type: "string", 
+                    format: "binary",
+                    description: "Arquivo de imagem do esporte" 
+                  }
                 },
                 required: ["nome"]
               }
@@ -455,14 +459,28 @@ module.exports = {
     },
     
     // Produtos
-    "/api/produtos": {
-      post: {
+    "/api/produtos": {      post: {
         summary: "Criar produto",
+        security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
           content: {
-            "application/json": {
-              schema: { $ref: "#/components/schemas/Produto" }
+            "multipart/form-data": {
+              schema: {
+                type: "object",
+                properties: {
+                  nome: { type: "string" },
+                  descricao: { type: "string" },
+                  preco: { type: "number", format: "float" },
+                  estoque: { type: "integer" },
+                  imagem: { 
+                    type: "string", 
+                    format: "binary",
+                    description: "Arquivo de imagem do produto" 
+                  }
+                },
+                required: ["nome", "descricao", "preco", "estoque", "imagem"]
+              }
             }
           }
         },
@@ -475,7 +493,9 @@ module.exports = {
               }
             }
           },
-          "400": { description: "Requisição inválida" }
+          "400": { description: "Requisição inválida" },
+          "401": { description: "Não autorizado" },
+          "403": { description: "Acesso negado - apenas administradores" }
         }
       },
       get: {
@@ -507,15 +527,19 @@ module.exports = {
             schema: { type: "string" },
             description: "ID do esporte"
           }
-        ],
-        requestBody: {
+        ],        requestBody: {
           required: true,
           content: {
-            "application/json": {
+            "multipart/form-data": {
               schema: {
                 type: "object",
                 properties: {
-                  nome: { type: "string" }
+                  nome: { type: "string" },
+                  foto: { 
+                    type: "string", 
+                    format: "binary",
+                    description: "Arquivo de imagem do esporte (opcional)" 
+                  }
                 },
                 required: ["nome"]
               }
@@ -918,11 +942,34 @@ module.exports = {
           },
           "400": { description: "Dados inválidos ou carrinho vazio" }
         }
-      }
-    },
+      }    },
     "/api/produtos/{id}": {
+      get: {
+        summary: "Detalhar produto por ID",
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "integer" },
+            description: "ID do produto"
+          }
+        ],
+        responses: {
+          "200": {
+            description: "Produto encontrado",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/Produto" }
+              }
+            }
+          },
+          "404": { description: "Produto não encontrado" }
+        }
+      },
       put: {
         summary: "Atualizar produto",
+        security: [{ bearerAuth: [] }],
         parameters: [
           {
             name: "id",
@@ -935,8 +982,21 @@ module.exports = {
         requestBody: {
           required: true,
           content: {
-            "application/json": {
-              schema: { $ref: "#/components/schemas/Produto" }
+            "multipart/form-data": {
+              schema: {
+                type: "object",
+                properties: {
+                  nome: { type: "string" },
+                  descricao: { type: "string" },
+                  preco: { type: "number", format: "float" },
+                  estoque: { type: "integer" },
+                  imagem: { 
+                    type: "string", 
+                    format: "binary",
+                    description: "Arquivo de imagem do produto (opcional)" 
+                  }
+                }
+              }
             }
           }
         },
@@ -950,11 +1010,13 @@ module.exports = {
             }
           },
           "400": { description: "Dados inválidos" },
+          "401": { description: "Não autorizado" },
+          "403": { description: "Acesso negado - apenas administradores" },
           "404": { description: "Produto não encontrado" }
         }
-      },
-      delete: {
+      },      delete: {
         summary: "Excluir produto",
+        security: [{ bearerAuth: [] }],
         parameters: [
           {
             name: "id",
@@ -963,8 +1025,7 @@ module.exports = {
             schema: { type: "integer" },
             description: "ID do produto"
           }
-        ],
-        responses: {
+        ],        responses: {
           "200": {
             description: "Produto excluído",
             content: {
@@ -978,6 +1039,8 @@ module.exports = {
               }
             }
           },
+          "401": { description: "Não autorizado" },
+          "403": { description: "Acesso negado - apenas administradores" },
           "404": { description: "Produto não encontrado" }
         }
       }
@@ -1170,22 +1233,27 @@ module.exports = {
             }
           }
         }
-      },
-      post: {
+      },      post: {
         summary: "Criar evento (admin)",
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
           content: {
-            "application/json": {
+            "multipart/form-data": {
               schema: {
-                type: "object",                properties: {
+                type: "object",
+                properties: {
                   titulo: { type: "string" },
                   descricao: { type: "string" },
                   tipo: { type: "string" },
                   data: { type: "string", format: "date-time" },
                   local: { type: "string" },
-                  esporteId: { type: "string", description: "ID do esporte ao qual o evento pertence. Use '0' para eventos gerais." }
+                  esporteId: { type: "string", description: "ID do esporte ao qual o evento pertence. Use '0' para eventos gerais." },
+                  foto: { 
+                    type: "string", 
+                    format: "binary",
+                    description: "Arquivo de imagem do evento" 
+                  }
                 },
                 required: ["titulo", "tipo", "data", "local", "esporteId"]
               }
@@ -1202,6 +1270,28 @@ module.exports = {
             }
           },
           "400": { description: "Erro ao criar evento" }
+        }
+      }
+    },
+    "/api/eventos/permitidos": {
+      get: {
+        summary: "Listar eventos permitidos para o usuário",
+        security: [{ bearerAuth: [] }],
+        description: "Lista eventos baseados nas inscrições em esportes do usuário",
+        responses: {
+          "200": {
+            description: "Lista de eventos permitidos",
+            content: {
+              "application/json": {
+                schema: { 
+                  type: "array", 
+                  items: { $ref: "#/components/schemas/Evento" } 
+                }
+              }
+            }
+          },
+          "401": { description: "Token de autenticação inválido" },
+          "500": { description: "Erro interno do servidor" }
         }
       }
     },
