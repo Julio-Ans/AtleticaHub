@@ -168,13 +168,21 @@ class EventoService {
       throw new Error('Falha ao listar eventos próximos');
     }
   }
-
   async listarEventosPorEsporte(esporteId) {
     try {
       return await eventoRepository.findByEsporte(esporteId);
     } catch (error) {
       console.error('Erro ao listar eventos por esporte:', error);
       throw new Error('Falha ao listar eventos por esporte');
+    }
+  }
+
+  async listarEventosPorEsportes(esportesIds) {
+    try {
+      return await eventoRepository.findByEsportes(esportesIds);
+    } catch (error) {
+      console.error('Erro ao listar eventos por esportes:', error);
+      throw new Error('Falha ao listar eventos por esportes');
     }
   }
 }

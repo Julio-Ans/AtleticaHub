@@ -192,7 +192,6 @@ module.exports = {  // Listar todos os eventos
       res.status(400).json({ error: 'Erro ao listar eventos inscritos', details: err.message });
     }
   },
-
   // Listar eventos por esporte
   async listarPorEsporte(req, res) {
     try {
@@ -202,6 +201,34 @@ module.exports = {  // Listar todos os eventos
     } catch (err) {
       console.error('Erro ao listar eventos por esporte:', err);
       res.status(400).json({ error: 'Erro ao listar eventos por esporte', details: err.message });
+    }
+  },
+
+  // Listar eventos que o usuário pode acessar (baseado em suas inscrições em esportes)
+  async listarEventosPermitidos(req, res) {
+    try {
+      const usuarioId = req.user.uid;
+      const isAdmin = req.user.role === 'admin';
+      
+      // Se for admin, pode ver todos os eventos
+      if (isAdmin) {
+        const eventos = await eventoService.listarEventos();
+        return res.json(eventos);
+      }
+      
+      // Para usuários comuns, buscar eventos baseados em suas inscrições aceitas
+      const inscricoes = await inscricaoService.listarPorUsuario(usuarioId);
+      const inscricoesAceitas = inscricoes.filter(inscricao => inscricao.status === 'aceito');
+      const esportesPermitidos = inscricoesAceitas.map(inscricao => inscricao.esporteId);
+      
+      // Adicionar eventos gerais (esporteId = "0") 
+      esportesPermitidos.push("0");
+      
+      const eventos = await eventoService.listarEventosPorEsportes(esportesPermitidos);
+      res.json(eventos);
+    } catch (err) {
+      console.error('Erro ao listar eventos permitidos:', err);
+      res.status(400).json({ error: 'Erro ao listar eventos permitidos', details: err.message });
     }
   },
 };

@@ -245,20 +245,216 @@
       color: #0c5460;
       border: 1px solid #bee5eb;
     }
-    
-    .loading {
+      .loading {
       display: flex;
       justify-content: center;
       align-items: center;
       padding: 20px;
       color: var(--secondary-color);
     }
-      .esporte-selector {
+    
+    .esporte-selector {
       width: 100%;
       padding: 8px;
       border: 1px solid var(--border-color);
       border-radius: 4px;
       margin-bottom: 15px;
+    }
+
+    /* Estilos para organização de eventos por esporte e tipo */
+    .esporte-eventos-container {
+      margin-bottom: 30px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    
+    .esporte-title {
+      background-color: var(--primary-color);
+      color: white;
+      padding: 15px;
+      margin: 0;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    
+    .tipos-eventos {
+      padding: 0;
+    }
+    
+    .tipo-eventos-container {
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .tipo-eventos-container:last-child {
+      border-bottom: none;
+    }
+    
+    .tipo-title {
+      background-color: var(--light-color);
+      color: var(--dark-color);
+      padding: 12px 15px;
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .eventos-lista {
+      padding: 15px;
+      background-color: #fafafa;
+    }
+    
+    .evento-card {
+      background-color: white;
+      border: 1px solid #e0e0e0;
+      margin-bottom: 15px;
+    }
+    
+    .evento-card:last-child {
+      margin-bottom: 0;
+    }
+    
+    .evento-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    
+    .btn-primary {
+      background-color: var(--success-color);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    
+    .btn-primary:hover {
+      background-color: #218838;
+    }
+    
+    .btn-secondary {
+      background-color: var(--danger-color);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    
+    .btn-secondary:hover {
+      background-color: #c82333;
+    }
+    
+    .inscrito-badge {
+      background-color: var(--success-color);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    /* Estilos para organização de eventos por esporte e tipo */
+    .esporte-eventos-container {
+      margin-bottom: 30px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    
+    .esporte-title {
+      background-color: var(--primary-color);
+      color: white;
+      padding: 15px;
+      margin: 0;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    
+    .tipos-eventos {
+      padding: 0;
+    }
+    
+    .tipo-eventos-container {
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .tipo-eventos-container:last-child {
+      border-bottom: none;
+    }
+    
+    .tipo-title {
+      background-color: var(--light-color);
+      color: var(--dark-color);
+      padding: 12px 15px;
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .eventos-lista {
+      padding: 15px;
+      background-color: #fafafa;
+    }
+    
+    .evento-card {
+      background-color: white;
+      border: 1px solid #e0e0e0;
+      margin-bottom: 15px;
+    }
+    
+    .evento-card:last-child {
+      margin-bottom: 0;
+    }
+    
+    .evento-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    
+    .btn-primary {
+      background-color: var(--success-color);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    
+    .btn-primary:hover {
+      background-color: #218838;
+    }
+    
+    .btn-secondary {
+      background-color: var(--danger-color);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    
+    .btn-secondary:hover {
+      background-color: #c82333;
+    }
+    
+    .inscrito-badge {
+      background-color: var(--success-color);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: bold;
     }
 
     /* Estilos para a Loja */
@@ -373,6 +569,105 @@
       color: white;
     }
     
+    /* Estilos para organização de eventos por esporte e tipo */
+    .esporte-eventos-container {
+      margin-bottom: 30px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    
+    .esporte-title {
+      background-color: var(--primary-color);
+      color: white;
+      padding: 15px;
+      margin: 0;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    
+    .tipos-eventos {
+      padding: 0;
+    }
+    
+    .tipo-eventos-container {
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .tipo-eventos-container:last-child {
+      border-bottom: none;
+    }
+    
+    .tipo-title {
+      background-color: var(--light-color);
+      color: var(--dark-color);
+      padding: 12px 15px;
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .eventos-lista {
+      padding: 15px;
+      background-color: #fafafa;
+    }
+    
+    .evento-card {
+      background-color: white;
+      border: 1px solid #e0e0e0;
+      margin-bottom: 15px;
+    }
+    
+    .evento-card:last-child {
+      margin-bottom: 0;
+    }
+    
+    .evento-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    
+    .btn-primary {
+      background-color: var(--success-color);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    
+    .btn-primary:hover {
+      background-color: #218838;
+    }
+    
+    .btn-secondary {
+      background-color: var(--danger-color);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    
+    .btn-secondary:hover {
+      background-color: #c82333;
+    }
+    
+    .inscrito-badge {
+      background-color: var(--success-color);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    
+    /* Responsividade */
     @media (max-width: 768px) {
       .tabs {
         flex-direction: column;
@@ -397,6 +692,16 @@
       .esporte-card button {
         margin-top: 10px;
         width: 100%;
+      }
+      
+      .evento-actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .evento-actions button {
+        width: 100%;
+        margin-bottom: 5px;
       }
     }
   </style>
@@ -506,12 +811,15 @@
 
   <script>
     // Constantes
-    const esporteGeralId = "0"; // Usando string em vez de número
-      // Variáveis globais
+    const esporteGeralId = "0"; // Usando string em vez de número    // Variáveis globais
     let firebaseUser;
     let esportes = [];
     let minhasInscricoes = [];
     let currentTab = 'mensagens';
+    
+    // Variáveis para a loja
+    let produtosDisponiveis = [];
+    let carrinho = [];
     
     // Inicialização
     async function main() {
@@ -843,38 +1151,116 @@
         showAlert('mensagensAlert', `Erro ao enviar mensagem: ${err.message}`, 'danger');
       }
     }
-    
-    // Carregar eventos do usuário
+      // Carregar eventos do usuário
     async function carregarEventosUsuario() {
       try {
         const token = await firebaseUser.getIdToken();
-        const res = await fetch('/api/eventos', { headers: { Authorization: `Bearer ${token}` } });
+        const res = await fetch('/api/eventos/permitidos', { headers: { Authorization: `Bearer ${token}` } });
         if (!res.ok) throw new Error('Erro ao carregar eventos');
         const eventos = await res.json();
         const lista = document.getElementById('listaEventosUsuario');
+        
         if (!eventos.length) {
-          lista.innerHTML = '<p>Nenhum evento disponível.</p>';
+          lista.innerHTML = '<p>Nenhum evento disponível para você.</p>';
           return;
         }
+        
+        // Organizar eventos por esporte e tipo
+        const eventosOrganizados = organizarEventosPorEsporteETipo(eventos);
+        
         lista.innerHTML = '';
-        eventos.forEach(ev => {
-          const inscrito = (ev.inscricoes||[]).some(i => i.usuarioId === firebaseUser.uid);
-          const div = document.createElement('div');
-          div.className = 'card';
-          div.innerHTML = `
-            <h3>${ev.titulo}</h3>
-            ${ev.fotoUrl ? `<img src="${ev.fotoUrl}" alt="Foto do evento" style="max-width:200px;max-height:150px;display:block;margin-bottom:10px;">` : ''}
-            <p><b>Tipo:</b> ${ev.tipo} | <b>Data:</b> ${new Date(ev.data).toLocaleString()} | <b>Local:</b> ${ev.local}</p>
-            <p>${ev.descricao || ''}</p>
-            <button onclick="${inscrito ? `cancelarInscricaoEvento('${ev._id}')` : `inscreverEvento('${ev._id}')`}">
-              ${inscrito ? 'Cancelar inscrição' : 'Inscrever-se'}
-            </button>
+        
+        // Renderizar eventos organizados
+        for (const [esporteId, tiposEventos] of Object.entries(eventosOrganizados)) {
+          const esporteNome = esporteId === '0' ? 'Eventos Gerais' : 
+            (esportes.find(e => e.id === esporteId)?.nome || 'Esporte Desconhecido');
+          
+          // Container do esporte
+          const esporteDiv = document.createElement('div');
+          esporteDiv.className = 'esporte-eventos-container';
+          esporteDiv.innerHTML = `
+            <h3 class="esporte-title">📋 ${esporteNome}</h3>
+            <div class="tipos-eventos"></div>
           `;
-          lista.appendChild(div);
-        });
+          
+          const tiposContainer = esporteDiv.querySelector('.tipos-eventos');
+          
+          // Renderizar eventos por tipo dentro do esporte
+          for (const [tipo, eventosDoTipo] of Object.entries(tiposEventos)) {
+            const tipoDiv = document.createElement('div');
+            tipoDiv.className = 'tipo-eventos-container';
+            tipoDiv.innerHTML = `
+              <h4 class="tipo-title">${formatarTipoEvento(tipo)}</h4>
+              <div class="eventos-lista"></div>
+            `;
+            
+            const eventosLista = tipoDiv.querySelector('.eventos-lista');
+            
+            eventosDoTipo.forEach(ev => {
+              const inscrito = (ev.inscricoes||[]).some(i => i.usuarioId === firebaseUser.uid);
+              const div = document.createElement('div');
+              div.className = 'card evento-card';
+              div.innerHTML = `
+                <h4>${ev.titulo}</h4>
+                ${ev.fotoUrl ? `<img src="${ev.fotoUrl}" alt="Foto do evento" style="max-width:200px;max-height:150px;display:block;margin-bottom:10px;">` : ''}
+                <p><b>Data:</b> ${new Date(ev.data).toLocaleString()} | <b>Local:</b> ${ev.local}</p>
+                <p>${ev.descricao || ''}</p>
+                <div class="evento-actions">
+                  <button class="${inscrito ? 'btn-secondary' : 'btn-primary'}" onclick="${inscrito ? `cancelarInscricaoEvento('${ev._id}')` : `inscreverEvento('${ev._id}')`}">
+                    ${inscrito ? '❌ Cancelar inscrição' : '✅ Inscrever-se'}
+                  </button>
+                  ${inscrito ? '<span class="inscrito-badge">Inscrito</span>' : ''}
+                </div>
+              `;
+              eventosLista.appendChild(div);
+            });
+            
+            tiposContainer.appendChild(tipoDiv);
+          }
+          
+          lista.appendChild(esporteDiv);
+        }
       } catch (err) {
+        console.error('Erro ao carregar eventos:', err);
         document.getElementById('listaEventosUsuario').innerHTML = '<p>Erro ao carregar eventos.</p>';
       }
+    }
+    
+    // Função auxiliar para organizar eventos por esporte e tipo
+    function organizarEventosPorEsporteETipo(eventos) {
+      const organizados = {};
+      
+      eventos.forEach(evento => {
+        const esporteId = evento.esporteId;
+        const tipo = evento.tipo;
+        
+        if (!organizados[esporteId]) {
+          organizados[esporteId] = {};
+        }
+        
+        if (!organizados[esporteId][tipo]) {
+          organizados[esporteId][tipo] = [];
+        }
+        
+        organizados[esporteId][tipo].push(evento);
+      });
+      
+      return organizados;
+    }
+    
+    // Função auxiliar para formatar o nome do tipo de evento
+    function formatarTipoEvento(tipo) {
+      const tipos = {
+        'treino': '🏃‍♂️ Treinos',
+        'reuniao': '👥 Reuniões',
+        'festa': '🎉 Festas',
+        'confraternizacao': '🤝 Confraternizações',
+        'palestra': '📢 Palestras',
+        'competicao': '🏆 Competições',
+        'evento': '📅 Eventos',
+        'geral': '📋 Eventos Gerais'
+      };
+      return tipos[tipo] || `📅 ${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`;
     }
     
     // Inscrever em evento
@@ -901,122 +1287,109 @@
         await carregarEventosUsuario();
       } catch (err) {
         alert('Erro ao cancelar inscrição.');
-      }
-    }
+      }    }
     
     // Exibir alertas
     function showAlert(containerId, message, type) {
       const container = document.getElementById(containerId);
       container.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
       
-      // Auto-esconder após 5 segundos
-      setTimeout(() => {
-        container.innerHTML = '';
-      }, 5000);
-    }
-    
-    // Logout
-    function logout() {
-      firebase.auth().signOut().then(() => {
-        window.location.href = '/login';
-      }).catch(err => {
-        console.error('Erro ao fazer logout:', err);
-        alert('Erro ao fazer logout. Por favor, tente novamente.');
-      });    }
-
-    // ==================== FUNÇÕES DA LOJA ====================
-    
-    let carrinho = [];
-    let produtosDisponiveis = [];
-    
-    // Carregar produtos da loja
-    async function carregarProdutos() {
-      try {
-        // Verificar se o usuário está autenticado, aguardar se necessário
-        if (!firebaseUser) {
-          console.log('⏳ Usuário não autenticado ainda, aguardando...');
-          showAlert('produtosAlert', 'Aguardando autenticação...', 'info');
-          
-          // Aguardar até 5 segundos pela autenticação
-          for (let i = 0; i < 50; i++) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-            if (firebaseUser) break;
-          }
-          
-          if (!firebaseUser) {
-            console.error('❌ Tempo limite para autenticação excedido');
-            showAlert('produtosAlert', 'Erro: usuário não autenticado', 'danger');
-            return;
-          }
-        }
-
-        console.log('🛒 Carregando produtos da loja...');
-        showAlert('produtosAlert', '', 'info');
-        document.getElementById('produtosContainer').innerHTML = '<div class="loading">Carregando produtos...</div>';
-        
-        const token = await firebaseUser.getIdToken();
-        console.log('🔐 Token obtido para requisição');
-        
-        const response = await fetch('/api/produtos', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        console.log('📡 Resposta da API:', response.status, response.statusText);
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('❌ Erro na resposta:', errorText);
-          throw new Error(`Erro ao carregar produtos: ${response.status} - ${errorText}`);
-        }
-        
-        const data = await response.json();
-        console.log('📦 Dados recebidos:', data);
-        
-        produtosDisponiveis = data.produtos || data || [];
-        console.log('🛍️ Produtos processados:', produtosDisponiveis.length, 'produtos');
-        
-        exibirProdutos(produtosDisponiveis);
-        
-      } catch (error) {
-        console.error('❌ Erro ao carregar produtos:', error);
-        showAlert('produtosAlert', 'Erro ao carregar produtos: ' + error.message, 'danger');
-        document.getElementById('produtosContainer').innerHTML = '<p>Erro ao carregar produtos.</p>';
+      // Auto-hide success messages after 5 seconds
+      if (type === 'success') {
+        setTimeout(() => {
+          container.innerHTML = '';
+        }, 5000);
       }
     }
 
-    // Exibir produtos na tela
+    // Carregar produtos da API
+    async function carregarProdutos() {
+      try {
+        const response = await fetch('/api/produtos');
+        
+        if (!response.ok) {
+          throw new Error('Erro ao carregar produtos');
+        }
+        
+        produtosDisponiveis = await response.json();
+        
+        // Carregar categorias únicas para o filtro
+        const categorias = [...new Set(produtosDisponiveis.map(p => p.categoria).filter(Boolean))];
+        const filtroCategoria = document.getElementById('filtroCategoria');
+        
+        if (filtroCategoria) {
+          filtroCategoria.innerHTML = '<option value="">Todas as categorias</option>';
+          categorias.forEach(categoria => {
+            const option = document.createElement('option');
+            option.value = categoria;
+            option.textContent = categoria;
+            filtroCategoria.appendChild(option);
+          });
+        }
+        
+        // Exibir todos os produtos inicialmente
+        exibirProdutos(produtosDisponiveis);
+        
+      } catch (error) {
+        console.error('Erro ao carregar produtos:', error);
+        showAlert('produtosAlert', 'Erro ao carregar produtos: ' + error.message, 'danger');
+        
+        // Exibir mensagem no container de produtos
+        const container = document.getElementById('produtosContainer');
+        if (container) {
+          container.innerHTML = '<p>Erro ao carregar produtos. Por favor, tente novamente.</p>';
+        }
+      }
+    }
+
+    // Exibir produtos na interface
     function exibirProdutos(produtos) {
       const container = document.getElementById('produtosContainer');
+      
+      if (!container) {
+        console.error('Container de produtos não encontrado');
+        return;
+      }
       
       if (!produtos || produtos.length === 0) {
         container.innerHTML = '<p>Nenhum produto encontrado.</p>';
         return;
       }
-
-      const html = `
-        <div class="produtos-grid">
-          ${produtos.map(produto => `
-            <div class="produto-card">
-              ${produto.imagemUrl ? 
-                `<img src="${produto.imagemUrl}" alt="${produto.nome}" class="produto-imagem" onerror="this.style.display='none'">` : 
-                `<div class="produto-imagem" style="display: flex; align-items: center; justify-content: center; background-color: var(--light-color); color: var(--secondary-color);">Sem imagem</div>`
-              }
-              <div class="produto-info">
-                <span class="produto-categoria">${produto.categoria || 'Produto'}</span>
-                <h4>${produto.nome}</h4>
-                <p style="color: var(--secondary-color); margin-bottom: 10px;">${produto.descricao || 'Sem descrição'}</p>
-                <div class="produto-preco">R$ ${parseFloat(produto.preco || 0).toFixed(2)}</div>
-                <div class="produto-acoes">
-                  <input type="number" min="1" value="1" class="quantidade-input" id="qty-${produto.id}">
-                  <button class="primary" onclick="adicionarAoCarrinho(${produto.id})">🛒 Adicionar</button>
-                </div>
+        container.innerHTML = produtos.map(produto => `
+        <div class="produto-card">
+          <img 
+            src="${produto.imagemUrl || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZTllOWU5Ii8+CiAgPHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OTk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlbSBuJmEzMzQ7byBkaXNwbyZudGlsZGU7dmVsPC90ZXh0Pgo8L3N2Zz4='}" 
+            alt="${produto.nome}" 
+            class="produto-imagem"
+            onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZTllOWU5Ii8+CiAgPHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OTk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkVycm8gYW8gY2FycmVnYXI8L3RleHQ+Cjwvc3ZnPic'"
+          >
+          <div class="produto-info">
+            ${produto.categoria ? `<span class="produto-categoria">${produto.categoria}</span>` : ''}
+            <h4>${produto.nome}</h4>
+            <p>${produto.descricao || ''}</p>
+            <div class="produto-preco">R$ ${parseFloat(produto.preco).toFixed(2)}</div>
+            ${produto.estoque > 0 ? `
+              <div class="produto-acoes">
+                <input 
+                  type="number" 
+                  min="1" 
+                  max="${produto.estoque}" 
+                  value="1" 
+                  id="qty-${produto.id}" 
+                  class="quantidade-input"
+                >
+                <button 
+                  class="primary" 
+                  onclick="adicionarAoCarrinho(${produto.id})"
+                >
+                  Adicionar ao Carrinho
+                </button>
               </div>
-            </div>
-          `).join('')}
+              <small style="color: var(--secondary-color);">Estoque: ${produto.estoque}</small>
+            ` : '<p style="color: var(--danger-color);">Produto esgotado</p>'}
+          </div>
         </div>
-      `;
-      
-      container.innerHTML = html;
+      `).join('');
     }
 
     // Filtrar produtos
@@ -1203,6 +1576,15 @@
           } catch (error) {
         console.error('Erro ao carregar pedidos:', error);
         document.getElementById('meusPedidosContainer').innerHTML = '<p>Erro ao carregar pedidos.</p>';
+      }
+    }    // Função de logout
+    async function logout() {
+      try {
+        await firebase.auth().signOut();
+        window.location.href = '/login';
+      } catch (err) {
+        console.error('Erro ao fazer logout:', err);
+        alert('Erro ao fazer logout. Por favor, tente novamente.');
       }
     }
 

@@ -13,6 +13,8 @@ const upload = multer({ storage });
 
 // Listar todos os eventos (aberto)
 router.get('/', eventoController.listar);
+// Listar eventos permitidos para o usuário (baseado em suas inscrições em esportes)
+router.get('/permitidos', verificarToken, eventoController.listarEventosPermitidos);
 // Listar eventos por esporte
 router.get('/esporte/:esporteId', eventoController.listarPorEsporte);
 // Buscar evento por ID

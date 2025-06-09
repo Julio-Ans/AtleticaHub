@@ -77,9 +77,14 @@ class EventoRepository {
       'inscricoes.usuarioId': usuarioId
     }).sort({ data: 1 });
   }
-
   async findByEsporte(esporteId) {
     return await Evento.find({ esporteId }).sort({ data: 1 });
+  }
+
+  async findByEsportes(esportesIds) {
+    return await Evento.find({ 
+      esporteId: { $in: esportesIds } 
+    }).sort({ data: 1 });
   }
 }
 
