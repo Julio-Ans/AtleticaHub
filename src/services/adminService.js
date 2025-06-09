@@ -5,11 +5,23 @@ const inscricaoRepository = require('../repositories/inscricaoRepository');
 /**
  * Inscreve automaticamente um administrador em todos os esportes
  * @param {string} userId ID do usuário admin
+ * @returns {Promise<{success: boolean, message?: string, error?: string}>} Resultado da operação
  */
 async function inscreverAdminEmTodosEsportes(userId) {
   try {
+    if (!userId) {
+      throw new Error('ID do usuário é obrigatório');
+    }
+    
     // Buscar todos os esportes
     const esportes = await esporteRepository.findAll();
+    
+    if (!esportes || esportes.length === 0) {
+      return { 
+        success: true, 
+        message: 'Nenhum esporte encontrado para inscrição' 
+      };
+    }
     
     // Para cada esporte, verificar se o admin já está inscrito
     for (const esporte of esportes) {
@@ -29,10 +41,16 @@ async function inscreverAdminEmTodosEsportes(userId) {
       }
     }
     
-    return true;
+    return { 
+      success: true, 
+      message: `Admin inscrito em ${esportes.length} esportes com sucesso` 
+    };
   } catch (error) {
     console.error('Erro ao inscrever admin em esportes:', error);
-    return false;
+    return { 
+      success: false, 
+      error: error.message || 'Erro desconhecido ao processar inscrições' 
+    };
   }
 }
 

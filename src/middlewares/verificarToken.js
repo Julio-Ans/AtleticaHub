@@ -10,20 +10,37 @@ async function verificarToken(req, res, next) {
   }
 
   const token = authHeader.split(' ')[1];
-
   try {
     const decodedToken = await admin.auth().verifyIdToken(token);
 
-    const usuario = await prisma.usuario.findUnique({
-      where: { id: decodedToken.uid }
-    });
+    // Busca o usuário completo no PostgreSQL usando repository
+    let usuario = await userRepository.findById(decodedToken.uid);
 
+    // Se o usuário não existir no banco, criar automaticamente
     if (!usuario) {
-      return res.status(401).json({ error: 'Usuário não encontrado no banco.' });
+      try {
+        // Buscar dados do usuário no Firebase
+        const firebaseUser = await admin.auth().getUser(decodedToken.uid);
+        
+        // Criar usuário no banco com dados mínimos
+        usuario = await userRepository.create({
+          id: decodedToken.uid,
+          nome: firebaseUser.displayName || firebaseUser.email || 'Usuário',
+          dataNascimento: new Date('1990-01-01'), // Data padrão
+          telefone: firebaseUser.phoneNumber || 'Não informado',
+          curso: 'Não informado',
+          role: 'user' // Padrão como usuário comum
+        });
+        
+        console.log(`Usuário criado automaticamente no banco: ${usuario.nome} (${usuario.id})`);
+      } catch (createErr) {
+        console.error('Erro ao criar usuário no banco:', createErr);
+        return res.status(500).json({ error: 'Erro ao criar usuário no sistema.' });
+      }
     }
 
-    req.usuario = usuario; // passa tudo: id, nome, email, role, etc.
-    req.user = { // mantém compatibilidade
+    // Preenche os dados que o controller precisa
+    req.user = {
       uid: usuario.id,
       nome: usuario.nome,
       email: usuario.email,

@@ -2,28 +2,22 @@ const express = require('express');
 const router = express.Router();
 const verificarToken = require('../middlewares/verificarToken');
 const checkRole = require('../middlewares/checkRole');
-const authService = require('../services/authService');
-const adminService = require('../services/adminService');
-const authController = require('../controllers/authController');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
-const {admin} = require('../config/firebaseAdmin');
+const AuthController = require('../controllers/authController');
 
-// Atualizar o endpoint de login
-router.post('/login', authController.loginUser);
-router.post('/login', authController.loginUser);
+// --- Rotas públicas de autenticação ---
+router.post('/register', AuthController.register); // API externa (Next.js)
+router.post('/login', AuthController.login);
+router.post('/verify', AuthController.verify);
+router.post('/profile', AuthController.profile);
+router.put('/update-profile', AuthController.updateProfile);
+router.post('/logout', AuthController.logout);
 
-// Rota de registro com a lógica corrigida
-router.post('/register', authController.registerUser);
-router.post('/register', authController.registerUser);
-
-// Rotas existentes
+// --- Rotas protegidas ---
 router.get('/verify-user', verificarToken, (req, res) => {
   res.json({
     authenticated: true,
     user: {
       uid: req.user.uid,
-      email: req.user.email,
       nome: req.user.nome,
       role: req.user.role
     }
@@ -36,75 +30,19 @@ router.get('/verify-admin', verificarToken, checkRole('admin'), (req, res) => {
     admin: true,
     user: {
       uid: req.user.uid,
-      email: req.user.email,
-      nome: req.user.nome
-    }
-  });
-});
-
-// Adicionar nova rota:
-
-// Rotas existentes
-router.get('/verify-user', verificarToken, (req, res) => {
-  res.json({
-    authenticated: true,
-    user: {
-      uid: req.user.uid,
-      email: req.user.email,
       nome: req.user.nome,
       role: req.user.role
     }
   });
 });
 
-router.get('/verify-admin', verificarToken, checkRole('admin'), (req, res) => {
-  res.json({
-    authenticated: true,
-    admin: true,
-    user: {
-      uid: req.user.uid,
-      email: req.user.email,
-      nome: req.user.nome
-    }
-  });
-});
-
-// Rotas existentes
-router.get('/verify-user', verificarToken, (req, res) => {
-  res.json({
-    authenticated: true,
-    user: {
-      uid: req.user.uid,
-      email: req.user.email,
-      nome: req.user.nome,
-      role: req.user.role
-    }
-  });
-});
-
-router.get('/verify-admin', verificarToken, checkRole('admin'), (req, res) => {
-  res.json({
-    authenticated: true,
-    admin: true,
-    user: {
-      uid: req.user.uid,
-      email: req.user.email,
-      nome: req.user.nome
-    }
-  });
-});
-
-// Rota para promover um usuário existente a administrador
+// Rota para promover usuário a admin
 router.patch('/promote/:userId', verificarToken, checkRole('admin'), async (req, res) => {
   try {
     const { userId } = req.params;
-    
-    const result = await authService.promoteUserToAdmin(userId);
-    const result = await authService.promoteUserToAdmin(userId);
-    
+    const result = await require('../services/authService').promoteUserToAdmin(userId);
     res.json({
       message: 'Usuário promovido para administrador com sucesso',
-      user: result
       user: result
     });
   } catch (err) {

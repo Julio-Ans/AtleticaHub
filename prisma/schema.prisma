@@ -64,6 +64,7 @@ model InviteCode {
 model Esporte {
   id        String    @id @default(uuid())
   nome      String
+  fotoUrl   String?   // URL da foto do esporte (opcional)
   criadoEm  DateTime  @default(now())
   inscricoes Inscricao[]
 }

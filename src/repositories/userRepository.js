@@ -37,12 +37,6 @@ class UserRepository {
     return await prisma.usuario.findMany();
   }
 
-  async findByEmail(email) {
-    return await prisma.usuario.findUnique({
-      where: { email }
-    });
-  }
-
   async findInviteCode(codigo) {
     return await prisma.inviteCode.findUnique({ 
       where: { code: codigo } 
