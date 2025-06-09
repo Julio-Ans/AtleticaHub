@@ -201,12 +201,12 @@
       <h1>Dashboard do Administrador</h1>
       <button class="reject" onclick="logout()">Sair</button>
     </div>
-    
-    <div class="tabs">
+      <div class="tabs">
       <div class="tab active" onclick="changeTab('inscricoes')">Inscrições</div>
       <div class="tab" onclick="changeTab('mensagens')">Mensagens</div>
       <div class="tab" onclick="changeTab('esportes')">Gerenciar Esportes</div>
       <div class="tab" onclick="changeTab('eventos')">Gerenciar Eventos</div>
+      <div class="tab" onclick="changeTab('loja')">Gerenciar Loja</div>
     </div>
     
     <div id="inscricoesTab">
@@ -261,8 +261,7 @@
         <p>Carregando esportes...</p>
       </div>
     </div>
-    
-    <div id="eventosTab" style="display:none">
+      <div id="eventosTab" style="display:none">
       <h2>Gerenciar Eventos</h2>
       <div class="card">
         <h3>Criar Novo Evento</h3>        <div class="form-group">
@@ -286,24 +285,57 @@
         <p>Carregando eventos...</p>
       </div>
     </div>
-  </div>
 
-  <!-- Vendas por produto -->
-  <h2>Relatório de Vendas por Produto</h2>
-  <div id="relatorioVendas"></div>
+    <div id="lojaTab" style="display:none">
+      <h2>Gerenciar Loja</h2>
+      
+      <!-- Ações rápidas -->
+      <div class="card">
+        <h3>Ações Rápidas</h3>
+        <div class="btn-group">
+          <button class="btn btn-primary" onclick="window.location.href='/cadastrar-produto.html'">
+            ➕ Cadastrar Novo Produto
+          </button>
+          <button class="btn btn-primary" onclick="window.location.href='/listar-produtos.html'">
+            📦 Gerenciar Produtos
+          </button>
+          <button class="btn btn-primary" onclick="carregarRelatorioVendas()">
+            📊 Atualizar Relatório
+          </button>
+        </div>
+      </div>
 
-  <!-- Criar produtos -->
-  <button onclick="window.location.href='/cadastrar-produto.html'">
-  ➕ Cadastrar Novo Produto
-  </button>
+      <!-- Estatísticas da loja -->
+      <div class="card">
+        <h3>Estatísticas da Loja</h3>
+        <div id="estatisticasLoja" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+          <div style="text-align: center; padding: 15px; background-color: #f8f9fa; border-radius: 4px;">
+            <h4 id="totalProdutos">-</h4>
+            <p>Total de Produtos</p>
+          </div>
+          <div style="text-align: center; padding: 15px; background-color: #f8f9fa; border-radius: 4px;">
+            <h4 id="totalPedidos">-</h4>
+            <p>Total de Pedidos</p>
+          </div>
+          <div style="text-align: center; padding: 15px; background-color: #f8f9fa; border-radius: 4px;">
+            <h4 id="vendasMes">-</h4>
+            <p>Vendas do Mês</p>
+          </div>
+        </div>
+      </div>
 
-  <!-- Listar Produtos -->
-  <button onclick="window.location.href='/listar-produtos.html'">
-  📦 Listar Produtos
-  </button>
-  
+      <!-- Pedidos recentes -->
+      <div class="card">
+        <h3>Pedidos Recentes</h3>
+        <div id="pedidosRecentesContainer" class="carregando">Carregando pedidos...</div>
+      </div>
 
-
+      <!-- Relatório de vendas por produto -->
+      <div class="card">
+        <h3>Relatório de Vendas por Produto</h3>
+        <div id="relatorioVendas" class="carregando">Carregando relatório...</div>
+      </div>
+    </div>  </div>
 
   <script>
     const esporteGeralId = "0"; // Número em vez de string
@@ -355,14 +387,13 @@
         window.location.href = '/login';
         return false;
       }
-    }
-
-    function changeTab(tab) {
+    }    function changeTab(tab) {
       // Ocultar todas as abas
       document.getElementById('inscricoesTab').style.display = 'none';
       document.getElementById('mensagensTab').style.display = 'none';
       document.getElementById('esportesTab').style.display = 'none';
       document.getElementById('eventosTab').style.display = 'none';
+      document.getElementById('lojaTab').style.display = 'none';
       
       // Remover classe ativa de todas as abas
       document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
@@ -372,6 +403,11 @@
       
       // Adicionar classe ativa à aba selecionada
       document.querySelector(`.tab[onclick="changeTab('${tab}')"]`).classList.add('active');
+      
+      // Carregar dados específicos da aba
+      if (tab === 'loja') {
+        carregarDadosLoja();
+      }
       
       currentTab = tab;
     }
@@ -1055,7 +1091,256 @@
       } catch (err) {
         alert('Erro ao editar evento.');
       }
-    }    // Iniciar a aplicação
+    }
+
+    // ==================== FUNÇÕES DA LOJA (ADMIN) ====================
+    
+    // Carregar todos os dados da loja
+    async function carregarDadosLoja() {
+      await Promise.all([
+        carregarEstatisticasLoja(),
+        carregarPedidosRecentes(),
+        carregarRelatorioVendas()
+      ]);
+    }
+
+    // Carregar estatísticas da loja
+    async function carregarEstatisticasLoja() {
+      try {
+        const token = await firebaseUser.getIdToken();
+        
+        // Carregar total de produtos
+        const produtosRes = await fetch('/api/produtos', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (produtosRes.ok) {
+          const produtosData = await produtosRes.json();
+          document.getElementById('totalProdutos').textContent = produtosData.produtos?.length || 0;
+        }
+        
+        // Carregar estatísticas de pedidos
+        const pedidosRes = await fetch('/api/pedidos/admin/estatisticas', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (pedidosRes.ok) {
+          const pedidosData = await pedidosRes.json();
+          document.getElementById('totalPedidos').textContent = pedidosData.totalPedidos || 0;
+          document.getElementById('vendasMes').textContent = `R$ ${(pedidosData.vendasMes || 0).toFixed(2)}`;
+        }
+        
+      } catch (error) {
+        console.error('Erro ao carregar estatísticas:', error);
+      }
+    }
+
+    // Carregar pedidos recentes
+    async function carregarPedidosRecentes() {
+      try {
+        const token = await firebaseUser.getIdToken();
+        const response = await fetch('/api/pedidos/admin/recentes', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        const container = document.getElementById('pedidosRecentesContainer');
+        
+        if (!response.ok) {
+          container.innerHTML = '<p>Erro ao carregar pedidos recentes.</p>';
+          return;
+        }
+        
+        const data = await response.json();
+        const pedidos = data.pedidos || [];
+        
+        if (pedidos.length === 0) {
+          container.innerHTML = '<p>Nenhum pedido recente.</p>';
+          return;
+        }
+        
+        container.innerHTML = `
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="background-color: #f8f9fa;">
+                <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">ID</th>
+                <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Cliente</th>
+                <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Total</th>
+                <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Status</th>
+                <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Data</th>
+                <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${pedidos.map(pedido => `
+                <tr>
+                  <td style="padding: 8px; border: 1px solid #ddd;">#${pedido.id}</td>
+                  <td style="padding: 8px; border: 1px solid #ddd;">${pedido.usuario?.nome || pedido.usuario?.email || 'N/A'}</td>
+                  <td style="padding: 8px; border: 1px solid #ddd;">R$ ${parseFloat(pedido.total).toFixed(2)}</td>
+                  <td style="padding: 8px; border: 1px solid #ddd;">
+                    <select onchange="atualizarStatusPedido(${pedido.id}, this.value)" style="padding: 4px;">
+                      <option value="pendente" ${pedido.status === 'pendente' ? 'selected' : ''}>Pendente</option>
+                      <option value="processando" ${pedido.status === 'processando' ? 'selected' : ''}>Processando</option>
+                      <option value="entregue" ${pedido.status === 'entregue' ? 'selected' : ''}>Entregue</option>
+                      <option value="cancelado" ${pedido.status === 'cancelado' ? 'selected' : ''}>Cancelado</option>
+                    </select>
+                  </td>
+                  <td style="padding: 8px; border: 1px solid #ddd;">${new Date(pedido.createdAt).toLocaleDateString('pt-BR')}</td>
+                  <td style="padding: 8px; border: 1px solid #ddd;">
+                    <button onclick="verDetalhesPedido(${pedido.id})" style="padding: 4px 8px; margin-right: 4px;">👁️</button>
+                    <button onclick="excluirPedido(${pedido.id})" class="btn-danger" style="padding: 4px 8px;">🗑️</button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `;
+        
+      } catch (error) {
+        console.error('Erro ao carregar pedidos recentes:', error);
+        document.getElementById('pedidosRecentesContainer').innerHTML = '<p>Erro ao carregar pedidos.</p>';
+      }
+    }
+
+    // Atualizar status do pedido
+    async function atualizarStatusPedido(pedidoId, novoStatus) {
+      try {
+        const token = await firebaseUser.getIdToken();
+        const response = await fetch(`/api/pedidos/${pedidoId}/status`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ status: novoStatus })
+        });
+        
+        if (!response.ok) {
+          throw new Error('Erro ao atualizar status');
+        }
+        
+        alert('Status atualizado com sucesso!');
+        carregarPedidosRecentes(); // Recarregar lista
+        
+      } catch (error) {
+        console.error('Erro ao atualizar status:', error);
+        alert('Erro ao atualizar status do pedido.');
+      }
+    }
+
+    // Ver detalhes do pedido
+    async function verDetalhesPedido(pedidoId) {
+      try {
+        const token = await firebaseUser.getIdToken();
+        const response = await fetch(`/api/pedidos/${pedidoId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Erro ao carregar detalhes');
+        }
+        
+        const data = await response.json();
+        const pedido = data.pedido;
+        
+        let detalhes = `Pedido #${pedido.id}\n`;
+        detalhes += `Cliente: ${pedido.usuario?.nome || pedido.usuario?.email || 'N/A'}\n`;
+        detalhes += `Total: R$ ${parseFloat(pedido.total).toFixed(2)}\n`;
+        detalhes += `Status: ${pedido.status}\n`;
+        detalhes += `Data: ${new Date(pedido.createdAt).toLocaleString('pt-BR')}\n\n`;
+        
+        if (pedido.itens && pedido.itens.length > 0) {
+          detalhes += 'Itens:\n';
+          pedido.itens.forEach(item => {
+            detalhes += `- ${item.produto?.nome || 'Produto não encontrado'} (Qtd: ${item.quantidade})\n`;
+          });
+        }
+        
+        alert(detalhes);
+        
+      } catch (error) {
+        console.error('Erro ao carregar detalhes:', error);
+        alert('Erro ao carregar detalhes do pedido.');
+      }
+    }
+
+    // Excluir pedido
+    async function excluirPedido(pedidoId) {
+      if (!confirm('Tem certeza que deseja excluir este pedido?')) {
+        return;
+      }
+      
+      try {
+        const token = await firebaseUser.getIdToken();
+        const response = await fetch(`/api/pedidos/${pedidoId}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Erro ao excluir pedido');
+        }
+        
+        alert('Pedido excluído com sucesso!');
+        carregarPedidosRecentes(); // Recarregar lista
+        carregarEstatisticasLoja(); // Atualizar estatísticas
+        
+      } catch (error) {
+        console.error('Erro ao excluir pedido:', error);
+        alert('Erro ao excluir pedido.');
+      }
+    }
+
+    // Carregar relatório de vendas
+    async function carregarRelatorioVendas() {
+      try {
+        const token = await firebaseUser.getIdToken();
+        const response = await fetch('/api/pedidos/admin/relatorio-vendas', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        const container = document.getElementById('relatorioVendas');
+        
+        if (!response.ok) {
+          container.innerHTML = '<p>Erro ao carregar relatório de vendas.</p>';
+          return;
+        }
+        
+        const data = await response.json();
+        const relatorio = data.relatorio || [];
+        
+        if (relatorio.length === 0) {
+          container.innerHTML = '<p>Nenhuma venda registrada.</p>';
+          return;
+        }
+        
+        container.innerHTML = `
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="background-color: #f8f9fa;">
+                <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Produto</th>
+                <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Quantidade Vendida</th>
+                <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Receita Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${relatorio.map(item => `
+                <tr>
+                  <td style="padding: 8px; border: 1px solid #ddd;">${item.nome}</td>
+                  <td style="padding: 8px; border: 1px solid #ddd;">${item.totalVendido}</td>
+                  <td style="padding: 8px; border: 1px solid #ddd;">R$ ${parseFloat(item.receita).toFixed(2)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `;
+        
+      } catch (error) {
+        console.error('Erro ao carregar relatório:', error);
+        document.getElementById('relatorioVendas').innerHTML = '<p>Erro ao carregar relatório.</p>';
+      }
+    }
+
+    // Iniciar a aplicação
     main();
   </script>
 </body>

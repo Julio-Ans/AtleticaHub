@@ -253,13 +253,124 @@
       padding: 20px;
       color: var(--secondary-color);
     }
-    
-    .esporte-selector {
+      .esporte-selector {
       width: 100%;
       padding: 8px;
       border: 1px solid var(--border-color);
       border-radius: 4px;
       margin-bottom: 15px;
+    }
+
+    /* Estilos para a Loja */
+    .produtos-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    .produto-card {
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 15px;
+      background-color: white;
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+
+    .produto-card:hover {
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      transform: translateY(-2px);
+    }
+
+    .produto-imagem {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      border-radius: 4px;
+      margin-bottom: 10px;
+      background-color: var(--light-color);
+    }
+
+    .produto-info h4 {
+      margin-bottom: 8px;
+      color: var(--dark-color);
+    }
+
+    .produto-preco {
+      font-size: 18px;
+      font-weight: bold;
+      color: var(--success-color);
+      margin-bottom: 10px;
+    }
+
+    .produto-categoria {
+      background-color: var(--primary-color);
+      color: white;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      margin-bottom: 10px;
+      display: inline-block;
+    }
+
+    .produto-acoes {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .quantidade-input {
+      width: 60px;
+      padding: 4px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      text-align: center;
+    }
+
+    .carrinho-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .carrinho-item:last-child {
+      border-bottom: none;
+    }
+
+    .pedido-card {
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      padding: 15px;
+      margin-bottom: 10px;
+    }
+
+    .pedido-status {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .pedido-status.pendente {
+      background-color: #ffc107;
+      color: #212529;
+    }
+
+    .pedido-status.processando {
+      background-color: #17a2b8;
+      color: white;
+    }
+
+    .pedido-status.entregue {
+      background-color: var(--success-color);
+      color: white;
+    }
+
+    .pedido-status.cancelado {
+      background-color: var(--danger-color);
+      color: white;
     }
     
     @media (max-width: 768px) {
@@ -300,11 +411,11 @@
         <button class="secondary" onclick="logout()" style="margin-left: 15px;">Sair</button>
       </div>
     </header>
-    
-    <div class="tabs">
+      <div class="tabs">
       <div class="tab active" onclick="changeTab('mensagens')">Mensagens</div>
       <div class="tab" onclick="changeTab('esportes')">Esportes</div>
       <div class="tab" onclick="changeTab('eventos')">Eventos</div>
+      <div class="tab" onclick="changeTab('loja')">Loja</div>
     </div>
     
     <!-- Tab Mensagens -->
@@ -335,12 +446,52 @@
       <div id="minhasInscricoesAlert"></div>
       <div id="minhasInscricoesContainer" class="loading">Carregando inscrições...</div>
     </div>
-    
-    <!-- Tab Eventos -->
+      <!-- Tab Eventos -->
     <div id="eventosTab" style="display:none">
       <h2>Eventos</h2>
       <div id="listaEventosUsuario">
         <p>Carregando eventos...</p>
+      </div>
+    </div>
+
+    <!-- Tab Loja -->
+    <div id="lojaTab" class="tab-content">
+      <h2>Loja AtléticaHub</h2>
+      
+      <!-- Filtros e busca -->
+      <div class="card">
+        <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+          <input type="text" id="buscarProduto" placeholder="Buscar produtos..." style="flex: 1; min-width: 200px; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+          <select id="filtroCategoria" onchange="filtrarProdutos()" style="padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+            <option value="">Todas as categorias</option>
+            <option value="camiseta">Camisetas</option>
+            <option value="short">Shorts</option>
+            <option value="acessorio">Acessórios</option>
+            <option value="equipamento">Equipamentos</option>
+          </select>
+          <button class="primary" onclick="carregarProdutos()">🔄 Atualizar</button>
+        </div>
+      </div>
+
+      <!-- Lista de produtos -->
+      <div id="produtosAlert"></div>
+      <div id="produtosContainer" class="loading">Carregando produtos...</div>
+
+      <!-- Carrinho -->
+      <div class="card" id="carrinhoSection" style="margin-top: 20px;">
+        <h3>🛒 Meu Carrinho (<span id="itensCarrinho">0</span> itens)</h3>
+        <div id="carrinhoContainer"></div>
+        <div id="carrinhoTotal" style="font-weight: bold; margin-top: 10px;"></div>
+        <div style="margin-top: 15px;">
+          <button class="success" onclick="finalizarCompra()" id="btnFinalizar" disabled>Finalizar Compra</button>
+          <button class="secondary" onclick="limparCarrinho()">Limpar Carrinho</button>
+        </div>
+      </div>
+
+      <!-- Meus Pedidos -->
+      <div class="card" style="margin-top: 20px;">
+        <h3>📋 Meus Pedidos</h3>
+        <div id="meusPedidosContainer" class="loading">Carregando pedidos...</div>
       </div>
     </div>
     
@@ -350,39 +501,17 @@
       <div class="card">
         <div id="perfilDetalhes">Carregando informações do perfil...</div>
         <button class="primary" onclick="logout()" style="margin-top: 20px;">Sair</button>
-      </div>
-    </div>
+      </div>    </div>
   </div>
-
-  <!-- Tab fazer compra -->
-  <h2>Fazer Pedido</h2>
-  <form id="formPedido">
-    <label for="produtoId">ID do Produto:</label>
-    <input type="number" id="produtoId" required>
-    <label for="quantidade">Quantidade:</label>
-    <input type="number" id="quantidade" required>
-    <br><br>
-    <label for="total">Total (R$):</label>
-    <input type="number" id="total" step="0.01" required>
-    <button type="submit">Enviar Pedido</button>
-  </form>
-  <div id="resultadoPedido"></div>
-
-
-  <!-- Tab pedidos -->
-  <h2>Meus Pedidos</h2>
-  <div id="meusPedidos"></div>
-
 
   <script>
     // Constantes
     const esporteGeralId = "0"; // Usando string em vez de número
-    
-    // Variáveis globais
+      // Variáveis globais
     let firebaseUser;
     let esportes = [];
     let minhasInscricoes = [];
-    let currentTab = 'esportes';
+    let currentTab = 'mensagens';
     
     // Inicialização
     async function main() {
@@ -457,8 +586,7 @@
         <p><strong>Nome:</strong> ${firebaseUser.displayName || 'Não definido'}</p>
         <p><strong>Email:</strong> ${firebaseUser.email}</p>
         <p><strong>Conta criada em:</strong> ${new Date(firebaseUser.metadata.creationTime).toLocaleString()}</p>
-      `;
-      document.getElementById('perfilDetalhes').innerHTML = perfilHTML;
+      `;      document.getElementById('perfilDetalhes').innerHTML = perfilHTML;
     }
     
     // Mudar entre abas
@@ -473,6 +601,25 @@
       
       // Esconder/mostrar eventosTab
       document.getElementById('eventosTab').style.display = tab === 'eventos' ? 'block' : 'none';
+      
+      // Se for a aba da loja, carregar produtos e pedidos quando autenticado
+      if (tab === 'loja') {
+        if (firebaseUser) {
+          carregarProdutos();
+          carregarMeusPedidosLoja();
+        } else {
+          // Aguardar autenticação antes de carregar
+          const checkAuth = () => {
+            if (firebaseUser) {
+              carregarProdutos();
+              carregarMeusPedidosLoja();
+            } else {
+              setTimeout(checkAuth, 100);
+            }
+          };
+          checkAuth();
+        }
+      }
       
       currentTab = tab;
     }
@@ -775,80 +922,292 @@
       }).catch(err => {
         console.error('Erro ao fazer logout:', err);
         alert('Erro ao fazer logout. Por favor, tente novamente.');
-      });
+      });    }
+
+    // ==================== FUNÇÕES DA LOJA ====================
+    
+    let carrinho = [];
+    let produtosDisponiveis = [];
+    
+    // Carregar produtos da loja
+    async function carregarProdutos() {
+      try {
+        // Verificar se o usuário está autenticado, aguardar se necessário
+        if (!firebaseUser) {
+          console.log('⏳ Usuário não autenticado ainda, aguardando...');
+          showAlert('produtosAlert', 'Aguardando autenticação...', 'info');
+          
+          // Aguardar até 5 segundos pela autenticação
+          for (let i = 0; i < 50; i++) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            if (firebaseUser) break;
+          }
+          
+          if (!firebaseUser) {
+            console.error('❌ Tempo limite para autenticação excedido');
+            showAlert('produtosAlert', 'Erro: usuário não autenticado', 'danger');
+            return;
+          }
+        }
+
+        console.log('🛒 Carregando produtos da loja...');
+        showAlert('produtosAlert', '', 'info');
+        document.getElementById('produtosContainer').innerHTML = '<div class="loading">Carregando produtos...</div>';
+        
+        const token = await firebaseUser.getIdToken();
+        console.log('🔐 Token obtido para requisição');
+        
+        const response = await fetch('/api/produtos', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        console.log('📡 Resposta da API:', response.status, response.statusText);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('❌ Erro na resposta:', errorText);
+          throw new Error(`Erro ao carregar produtos: ${response.status} - ${errorText}`);
+        }
+        
+        const data = await response.json();
+        console.log('📦 Dados recebidos:', data);
+        
+        produtosDisponiveis = data.produtos || data || [];
+        console.log('🛍️ Produtos processados:', produtosDisponiveis.length, 'produtos');
+        
+        exibirProdutos(produtosDisponiveis);
+        
+      } catch (error) {
+        console.error('❌ Erro ao carregar produtos:', error);
+        showAlert('produtosAlert', 'Erro ao carregar produtos: ' + error.message, 'danger');
+        document.getElementById('produtosContainer').innerHTML = '<p>Erro ao carregar produtos.</p>';
+      }
     }
 
-        // Mostrar pedidos
-    async function carregarMeusPedidos() {
-    const token = await firebaseUser.getIdToken();
+    // Exibir produtos na tela
+    function exibirProdutos(produtos) {
+      const container = document.getElementById('produtosContainer');
+      
+      if (!produtos || produtos.length === 0) {
+        container.innerHTML = '<p>Nenhum produto encontrado.</p>';
+        return;
+      }
 
-    const res = await fetch('/api/pedidos/meus', {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+      const html = `
+        <div class="produtos-grid">
+          ${produtos.map(produto => `
+            <div class="produto-card">
+              ${produto.imagemUrl ? 
+                `<img src="${produto.imagemUrl}" alt="${produto.nome}" class="produto-imagem" onerror="this.style.display='none'">` : 
+                `<div class="produto-imagem" style="display: flex; align-items: center; justify-content: center; background-color: var(--light-color); color: var(--secondary-color);">Sem imagem</div>`
+              }
+              <div class="produto-info">
+                <span class="produto-categoria">${produto.categoria || 'Produto'}</span>
+                <h4>${produto.nome}</h4>
+                <p style="color: var(--secondary-color); margin-bottom: 10px;">${produto.descricao || 'Sem descrição'}</p>
+                <div class="produto-preco">R$ ${parseFloat(produto.preco || 0).toFixed(2)}</div>
+                <div class="produto-acoes">
+                  <input type="number" min="1" value="1" class="quantidade-input" id="qty-${produto.id}">
+                  <button class="primary" onclick="adicionarAoCarrinho(${produto.id})">🛒 Adicionar</button>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+      
+      container.innerHTML = html;
+    }
 
-    const pedidos = await res.json();
-
-    let html = '';
-
-    pedidos.forEach(pedido => {
-      html += `<h3>Pedido #${pedido.id} - Status: ${pedido.status} - Total: R$${pedido.total.toFixed(2)}</h3>`;
-      html += '<ul>';
-      pedido.produtos.forEach(item => {
-        html += `<li>${item.produto.nome} - Quantidade: ${item.quantidade}</li>`;
+    // Filtrar produtos
+    function filtrarProdutos() {
+      const busca = document.getElementById('buscarProduto').value.toLowerCase();
+      const categoria = document.getElementById('filtroCategoria').value;
+      
+      let produtosFiltrados = produtosDisponiveis.filter(produto => {
+        const matchBusca = !busca || produto.nome.toLowerCase().includes(busca) || 
+                          (produto.descricao && produto.descricao.toLowerCase().includes(busca));
+        const matchCategoria = !categoria || produto.categoria === categoria;
+        return matchBusca && matchCategoria;
       });
-      html += '</ul><hr>';
+      
+      exibirProdutos(produtosFiltrados);
+    }
+
+    // Adicionar evento de busca em tempo real
+    document.addEventListener('DOMContentLoaded', function() {
+      const buscarInput = document.getElementById('buscarProduto');
+      if (buscarInput) {
+        buscarInput.addEventListener('input', filtrarProdutos);
+      }
     });
 
-    document.getElementById('meusPedidos').innerHTML = html;
-  }
-  carregarMeusPedidos();
-
-  // Fazer pedido
-   document.getElementById('formPedido').addEventListener('submit', async e => {
-    e.preventDefault();
-
-    const token = await firebaseUser.getIdToken();
-    const produtoId = parseInt(document.getElementById('produtoId').value);
-    const quantidade = parseInt(document.getElementById('quantidade').value);
-    const total = parseFloat(document.getElementById('total').value);
-
-    const res = await fetch('/api/pedidos', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        total,
-        itens: [{ produtoId, quantidade }]
-      })
-    });
-
-    const resultado = await res.json();
-    document.getElementById('resultadoPedido').innerText = res.ok
-      ? '✅ Pedido enviado!'
-      : `❌ Erro: ${resultado.error}`;
-  });
-    
-    // Chamar carregarEventosUsuario ao iniciar
-    main = (function(origMain){
-      return async function() {
-        await origMain();
-        await carregarEventosUsuario();
+    // Adicionar produto ao carrinho
+    function adicionarAoCarrinho(produtoId) {
+      const produto = produtosDisponiveis.find(p => p.id === produtoId);
+      if (!produto) return;
+      
+      const quantidade = parseInt(document.getElementById(`qty-${produtoId}`).value) || 1;
+      
+      const itemExistente = carrinho.find(item => item.produtoId === produtoId);
+      if (itemExistente) {
+        itemExistente.quantidade += quantidade;
+      } else {
+        carrinho.push({
+          produtoId: produtoId,
+          nome: produto.nome,
+          preco: parseFloat(produto.preco),
+          quantidade: quantidade
+        });
       }
-    })(main);
-    
-    // Chamar carregarEventosUsuario ao iniciar
-    main = (function(origMain){
-      return async function() {
-        await origMain();
-        await carregarEventosUsuario();
+      
+      atualizarCarrinho();
+      showAlert('produtosAlert', `${produto.nome} adicionado ao carrinho!`, 'success');
+      
+      // Reset quantity input
+      document.getElementById(`qty-${produtoId}`).value = 1;
+    }
+
+    // Atualizar exibição do carrinho
+    function atualizarCarrinho() {
+      const container = document.getElementById('carrinhoContainer');
+      const itensSpan = document.getElementById('itensCarrinho');
+      const totalDiv = document.getElementById('carrinhoTotal');
+      const btnFinalizar = document.getElementById('btnFinalizar');
+      
+      if (carrinho.length === 0) {
+        container.innerHTML = '<p>Carrinho vazio</p>';
+        itensSpan.textContent = '0';
+        totalDiv.textContent = '';
+        btnFinalizar.disabled = true;
+        return;
       }
-    })(main);
-    
+      
+      const total = carrinho.reduce((sum, item) => sum + (item.preco * item.quantidade), 0);
+      
+      container.innerHTML = carrinho.map(item => `
+        <div class="carrinho-item">
+          <div>
+            <strong>${item.nome}</strong><br>
+            <small>R$ ${item.preco.toFixed(2)} x ${item.quantidade}</small>
+          </div>
+          <div>
+            <button class="secondary" onclick="removerDoCarrinho(${item.produtoId})" style="padding: 4px 8px; font-size: 12px;">Remover</button>
+          </div>
+        </div>
+      `).join('');
+      
+      itensSpan.textContent = carrinho.reduce((sum, item) => sum + item.quantidade, 0);
+      totalDiv.textContent = `Total: R$ ${total.toFixed(2)}`;
+      btnFinalizar.disabled = false;
+    }
+
+    // Remover item do carrinho
+    function removerDoCarrinho(produtoId) {
+      carrinho = carrinho.filter(item => item.produtoId !== produtoId);
+      atualizarCarrinho();
+    }
+
+    // Limpar carrinho
+    function limparCarrinho() {
+      carrinho = [];
+      atualizarCarrinho();
+    }
+
+    // Finalizar compra
+    async function finalizarCompra() {
+      if (carrinho.length === 0) return;
+      
+      try {
+        const token = await firebaseUser.getIdToken();
+        const total = carrinho.reduce((sum, item) => sum + (item.preco * item.quantidade), 0);
+        
+        const response = await fetch('/api/pedidos', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            total: total,
+            itens: carrinho.map(item => ({
+              produtoId: item.produtoId,
+              quantidade: item.quantidade
+            }))
+          })
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Erro ao processar pedido');
+        }
+        
+        const resultado = await response.json();
+        showAlert('produtosAlert', 'Pedido realizado com sucesso! Número: ' + resultado.pedido.id, 'success');
+        
+        // Limpar carrinho e recarregar pedidos
+        limparCarrinho();
+        carregarMeusPedidosLoja();
+        
+      } catch (error) {
+        console.error('Erro ao finalizar compra:', error);
+        showAlert('produtosAlert', 'Erro ao finalizar compra: ' + error.message, 'danger');
+      }
+    }
+
+    // Carregar meus pedidos (versão para loja)
+    async function carregarMeusPedidosLoja() {
+      try {
+        const token = await firebaseUser.getIdToken();
+        const response = await fetch('/api/pedidos/meus', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Erro ao carregar pedidos');
+        }
+        
+        const data = await response.json();
+        const pedidos = data.pedidos || [];
+        
+        const container = document.getElementById('meusPedidosContainer');
+        
+        if (pedidos.length === 0) {
+          container.innerHTML = '<p>Nenhum pedido encontrado.</p>';
+          return;
+        }
+          container.innerHTML = pedidos.map(pedido => `
+          <div class="pedido-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <strong>Pedido #${pedido.id}</strong>
+              <span class="pedido-status ${pedido.status}">${pedido.status.toUpperCase()}</span>
+            </div>
+            <div style="margin-bottom: 8px;">
+              <strong>Total: R$ ${parseFloat(pedido.total).toFixed(2)}</strong>
+            </div>
+            <div style="font-size: 14px; color: var(--secondary-color);">
+              Data: ${new Date(pedido.createdAt).toLocaleDateString('pt-BR')}
+            </div>
+            ${pedido.itens && pedido.itens.length > 0 ? `
+              <div style="margin-top: 10px;">
+                <strong>Itens:</strong>
+                <ul style="margin: 5px 0; padding-left: 20px;">
+                  ${pedido.itens.map(item => `
+                    <li>${item.produto ? item.produto.nome : 'Produto não encontrado'} - Qtd: ${item.quantidade}</li>
+                  `).join('')}
+                </ul>
+              </div>
+            ` : ''}
+          </div>
+        `).join('');
+          } catch (error) {
+        console.error('Erro ao carregar pedidos:', error);
+        document.getElementById('meusPedidosContainer').innerHTML = '<p>Erro ao carregar pedidos.</p>';
+      }
+    }
+
     // Iniciar a aplicação
     main();
-</script>
   </script>
 </body>
 </html>
