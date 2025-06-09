@@ -1,11 +1,10 @@
 const cartService = require('../services/cartService');
 
-module.exports = {
-  // Listar itens do carrinho
+module.exports = {  // Listar itens do carrinho
   async listar(req, res) {
     try {
-      const studentEmail = req.user.email;
-      const items = await cartService.listarItens(studentEmail);
+      const usuarioId = req.user.uid;
+      const items = await cartService.listarItens(usuarioId);
       res.json(items);
     } catch (err) {
       console.error('Erro ao listar carrinho:', err);
@@ -16,7 +15,7 @@ module.exports = {
   // Adicionar item ao carrinho
   async adicionar(req, res) {
     try {
-      const studentEmail = req.user.email;
+      const usuarioId = req.user.uid;
       const { produtoId, quantidade } = req.body;
 
       // Validações básicas
@@ -29,7 +28,7 @@ module.exports = {
       }
 
       const cartItem = await cartService.adicionarItem({
-        studentEmail,
+        usuarioId,
         produtoId: parseInt(produtoId),
         quantidade: parseInt(quantidade)
       });
@@ -99,14 +98,12 @@ module.exports = {
       res.status(500).json({ error: 'Erro ao remover item' });
     }
   },
-
   // Finalizar pedido (checkout)
   async checkout(req, res) {
     try {
       const usuarioId = req.user.uid;
-      const studentEmail = req.user.email;
 
-      const pedido = await cartService.finalizarPedido(usuarioId, studentEmail);
+      const pedido = await cartService.finalizarPedido(usuarioId);
 
       res.status(201).json({
         pedido,
@@ -130,9 +127,9 @@ module.exports = {
   // Limpar carrinho
   async limpar(req, res) {
     try {
-      const studentEmail = req.user.email;
+      const usuarioId = req.user.uid;
       
-      await cartService.limparCarrinho(studentEmail);
+      await cartService.limparCarrinho(usuarioId);
       res.json({ message: 'Carrinho limpo com sucesso' });
     } catch (err) {
       console.error('Erro ao limpar carrinho:', err);

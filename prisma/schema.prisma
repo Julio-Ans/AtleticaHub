@@ -8,85 +8,86 @@ datasource db {
 }
 
 model Produto {
-  id          Int              @id @default(autoincrement())
-  nome        String
-  descricao   String
-  preco       Float
-  estoque     Int
-  imagemUrl   String?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  pedidos     PedidoProduto[] 
-  carrinho CartItem[]
+  id        Int             @id @default(autoincrement())
+  nome      String
+  descricao String
+  preco     Float
+  estoque   Int
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  imagemUrl String?
+  carrinho  CartItem[]
+  pedidos   PedidoProduto[]
 }
 
-
 model CartItem {
-  id           Int       @id @default(autoincrement())
-  studentEmail String
-  produto      Produto   @relation(fields: [produtoId], references: [id])
-  produtoId    Int
-  quantidade   Int
-  createdAt    DateTime  @default(now())
+  id         Int      @id @default(autoincrement())
+  produtoId  Int
+  quantidade Int
+  createdAt  DateTime @default(now())
+  usuarioId  String
+  produto    Produto  @relation(fields: [produtoId], references: [id])
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id])
 }
 
 model Pedido {
-  id           Int              @id @default(autoincrement())
-  usuarioId    String
-  usuario      Usuario          @relation(fields: [usuarioId], references: [id])
-  total        Float
-  status       String           @default("pendente")
-  createdAt    DateTime         @default(now())
-  produtos     PedidoProduto[]  // ← Relacionamento
+  id        Int             @id @default(autoincrement())
+  total     Float
+  status    String          @default("pendente")
+  createdAt DateTime        @default(now())
+  usuarioId String
+  usuario   Usuario         @relation(fields: [usuarioId], references: [id])
+  produtos  PedidoProduto[]
 }
 
 model PedidoProduto {
   id         Int     @id @default(autoincrement())
-  pedido     Pedido  @relation(fields: [pedidoId], references: [id])
   pedidoId   Int
-  produto    Produto @relation(fields: [produtoId], references: [id])
   produtoId  Int
   quantidade Int
+  pedido     Pedido  @relation(fields: [pedidoId], references: [id])
+  produto    Produto @relation(fields: [produtoId], references: [id])
 }
 
 model EmailDomain {
-  id      Int    @id @default(autoincrement())
-  domain  String @unique
+  id     Int    @id @default(autoincrement())
+  domain String @unique
 }
 
 model InviteCode {
-  id     Int     @id @default(autoincrement())
-  code   String  @unique
-  role   String
-  used   Boolean @default(false)
+  id   Int     @id @default(autoincrement())
+  code String  @unique
+  role String
+  used Boolean @default(false)
 }
 
 model Esporte {
-  id        String    @id @default(uuid())
-  nome      String
-  fotoUrl   String?   // URL da foto do esporte (opcional)
-  criadoEm  DateTime  @default(now())
+  id         String      @id @default(uuid())
+  nome       String
+  criadoEm   DateTime    @default(now())
+  fotoUrl    String?
   inscricoes Inscricao[]
 }
 
 model Usuario {
-  id             String   @id               // UID do Firebase
+  id             String      @id
   nome           String
   dataNascimento DateTime
   telefone       String
   curso          String
-  role           String @default("user")   // Adicionando o campo `role` para definir o tipo de usuário
-  createdAt      DateTime @default(now())
+  createdAt      DateTime    @default(now())
+  role           String      @default("user")
+  carrinho       CartItem[]
   inscricoes     Inscricao[]
-  pedidos Pedido[]
+  pedidos        Pedido[]
 }
 
 model Inscricao {
   id        String   @id @default(uuid())
-  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
   usuarioId String
-  esporte   Esporte  @relation(fields: [esporteId], references: [id])
   esporteId String
-  status    String   @default("pendente") // pendente | aceito | recusado
+  status    String   @default("pendente")
   criadaEm  DateTime @default(now())
+  esporte   Esporte  @relation(fields: [esporteId], references: [id])
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
 }

@@ -909,17 +909,18 @@
       
       // Esconder/mostrar eventosTab
       document.getElementById('eventosTab').style.display = tab === 'eventos' ? 'block' : 'none';
-      
-      // Se for a aba da loja, carregar produtos e pedidos quando autenticado
+        // Se for a aba da loja, carregar produtos, carrinho e pedidos quando autenticado
       if (tab === 'loja') {
         if (firebaseUser) {
           carregarProdutos();
+          carregarCarrinhoBackend();
           carregarMeusPedidosLoja();
         } else {
           // Aguardar autenticação antes de carregar
           const checkAuth = () => {
             if (firebaseUser) {
               carregarProdutos();
+              carregarCarrinhoBackend();
               carregarMeusPedidosLoja();
             } else {
               setTimeout(checkAuth, 100);
@@ -1413,42 +1414,73 @@
       if (buscarInput) {
         buscarInput.addEventListener('input', filtrarProdutos);
       }
-    });
-
-    // Adicionar produto ao carrinho
-    function adicionarAoCarrinho(produtoId) {
+    });    // Adicionar produto ao carrinho (conectado ao backend)
+    async function adicionarAoCarrinho(produtoId) {
       const produto = produtosDisponiveis.find(p => p.id === produtoId);
       if (!produto) return;
       
       const quantidade = parseInt(document.getElementById(`qty-${produtoId}`).value) || 1;
       
-      const itemExistente = carrinho.find(item => item.produtoId === produtoId);
-      if (itemExistente) {
-        itemExistente.quantidade += quantidade;
-      } else {
-        carrinho.push({
-          produtoId: produtoId,
-          nome: produto.nome,
-          preco: parseFloat(produto.preco),
-          quantidade: quantidade
+      try {
+        const token = await firebaseUser.getIdToken();
+        const response = await fetch('/api/cart', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            produtoId: produtoId,
+            quantidade: quantidade
+          })
         });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Erro ao adicionar ao carrinho');
+        }
+        
+        showAlert('produtosAlert', `${produto.nome} adicionado ao carrinho!`, 'success');
+        
+        // Recarregar carrinho do backend
+        await carregarCarrinhoBackend();
+        
+        // Reset quantity input
+        document.getElementById(`qty-${produtoId}`).value = 1;
+        
+      } catch (error) {
+        console.error('Erro ao adicionar ao carrinho:', error);
+        showAlert('produtosAlert', 'Erro ao adicionar ao carrinho: ' + error.message, 'danger');
       }
-      
-      atualizarCarrinho();
-      showAlert('produtosAlert', `${produto.nome} adicionado ao carrinho!`, 'success');
-      
-      // Reset quantity input
-      document.getElementById(`qty-${produtoId}`).value = 1;
+    }    // Carregar carrinho do backend
+    async function carregarCarrinhoBackend() {
+      try {
+        const token = await firebaseUser.getIdToken();
+        const response = await fetch('/api/cart', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Erro ao carregar carrinho');
+        }
+        
+        const itensCarrinho = await response.json();
+        atualizarCarrinhoUI(itensCarrinho);
+        
+      } catch (error) {
+        console.error('Erro ao carregar carrinho:', error);
+        document.getElementById('carrinhoContainer').innerHTML = '<p>Erro ao carregar carrinho</p>';
+      }
     }
 
-    // Atualizar exibição do carrinho
-    function atualizarCarrinho() {
+    // Atualizar exibição do carrinho (usando dados do backend)
+    function atualizarCarrinhoUI(itensCarrinho) {
       const container = document.getElementById('carrinhoContainer');
       const itensSpan = document.getElementById('itensCarrinho');
       const totalDiv = document.getElementById('carrinhoTotal');
       const btnFinalizar = document.getElementById('btnFinalizar');
       
-      if (carrinho.length === 0) {
+      if (!itensCarrinho || itensCarrinho.length === 0) {
         container.innerHTML = '<p>Carrinho vazio</p>';
         itensSpan.textContent = '0';
         totalDiv.textContent = '';
@@ -1456,69 +1488,87 @@
         return;
       }
       
-      const total = carrinho.reduce((sum, item) => sum + (item.preco * item.quantidade), 0);
+      const total = itensCarrinho.reduce((sum, item) => sum + (item.produto.preco * item.quantidade), 0);
+      const totalItens = itensCarrinho.reduce((sum, item) => sum + item.quantidade, 0);
       
-      container.innerHTML = carrinho.map(item => `
+      container.innerHTML = itensCarrinho.map(item => `
         <div class="carrinho-item">
           <div>
-            <strong>${item.nome}</strong><br>
-            <small>R$ ${item.preco.toFixed(2)} x ${item.quantidade}</small>
+            <strong>${item.produto.nome}</strong><br>
+            <small>R$ ${item.produto.preco.toFixed(2)} x ${item.quantidade}</small>
           </div>
           <div>
-            <button class="secondary" onclick="removerDoCarrinho(${item.produtoId})" style="padding: 4px 8px; font-size: 12px;">Remover</button>
+            <button class="secondary" onclick="removerDoCarrinhoBackend(${item.id})" style="padding: 4px 8px; font-size: 12px;">Remover</button>
           </div>
         </div>
       `).join('');
       
-      itensSpan.textContent = carrinho.reduce((sum, item) => sum + item.quantidade, 0);
+      itensSpan.textContent = totalItens;
       totalDiv.textContent = `Total: R$ ${total.toFixed(2)}`;
       btnFinalizar.disabled = false;
-    }
-
-    // Remover item do carrinho
-    function removerDoCarrinho(produtoId) {
-      carrinho = carrinho.filter(item => item.produtoId !== produtoId);
-      atualizarCarrinho();
-    }
-
-    // Limpar carrinho
-    function limparCarrinho() {
-      carrinho = [];
-      atualizarCarrinho();
-    }
-
-    // Finalizar compra
-    async function finalizarCompra() {
-      if (carrinho.length === 0) return;
-      
+    }    // Remover item do carrinho (conectado ao backend)
+    async function removerDoCarrinhoBackend(itemId) {
       try {
         const token = await firebaseUser.getIdToken();
-        const total = carrinho.reduce((sum, item) => sum + (item.preco * item.quantidade), 0);
+        const response = await fetch(`/api/cart/${itemId}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        });
         
-        const response = await fetch('/api/pedidos', {
+        if (!response.ok) {
+          throw new Error('Erro ao remover item');
+        }
+        
+        showAlert('produtosAlert', 'Item removido do carrinho!', 'success');
+        await carregarCarrinhoBackend();
+        
+      } catch (error) {
+        console.error('Erro ao remover item:', error);
+        showAlert('produtosAlert', 'Erro ao remover item: ' + error.message, 'danger');
+      }
+    }
+
+    // Limpar carrinho (conectado ao backend)
+    async function limparCarrinho() {
+      try {
+        const token = await firebaseUser.getIdToken();
+        const response = await fetch('/api/cart', {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Erro ao limpar carrinho');
+        }
+        
+        showAlert('produtosAlert', 'Carrinho limpo!', 'success');
+        await carregarCarrinhoBackend();
+        
+      } catch (error) {
+        console.error('Erro ao limpar carrinho:', error);
+        showAlert('produtosAlert', 'Erro ao limpar carrinho: ' + error.message, 'danger');
+      }
+    }    // Finalizar compra (usando o endpoint do carrinho)
+    async function finalizarCompra() {
+      try {
+        const token = await firebaseUser.getIdToken();
+        
+        // Usar o endpoint do carrinho para finalizar
+        const response = await fetch('/api/cart/finalizar', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            total: total,
-            itens: carrinho.map(item => ({
-              produtoId: item.produtoId,
-              quantidade: item.quantidade
-            }))
-          })
+          headers: { Authorization: `Bearer ${token}` }
         });
         
         if (!response.ok) {
           const error = await response.json();
           throw new Error(error.error || 'Erro ao processar pedido');
         }
-          const resultado = await response.json();
+        
+        const resultado = await response.json();
         showAlert('produtosAlert', 'Pedido realizado com sucesso! Número: ' + resultado.id, 'success');
         
-        // Limpar carrinho e recarregar pedidos
-        limparCarrinho();
+        // Recarregar carrinho (será limpo automaticamente pelo backend) e pedidos
+        await carregarCarrinhoBackend();
         carregarMeusPedidosLoja();
         
       } catch (error) {

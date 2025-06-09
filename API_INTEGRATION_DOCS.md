@@ -1,171 +1,461 @@
 # AtleticaHub - Documentação Completa da API
 
+## 📚 Índice
+- [Visão Geral](#visão-geral)
+- [🔐 Autenticação](#-autenticação)
+- [🏃‍♀️ Esportes](#️-esportes)
+- [📅 Eventos](#-eventos)
+- [📝 Inscrições](#-inscrições)
+- [💬 Mensagens](#-mensagens)
+- [🛍️ Produtos](#️-produtos)
+- [🛒 Carrinho](#-carrinho)
+- [📋 Pedidos](#-pedidos)
+- [🔧 Configurações e Middlewares](#-configurações-e-middlewares)
+- [🚨 Códigos de Erro](#-códigos-de-erro)
+
 ## Visão Geral
 
-A API do AtleticaHub oferece um sistema completo de gerenciamento esportivo e loja com endpoints para:
-- **Autenticação** (Firebase + Sistema próprio)
-- **Esportes** (CRUD para admins, listagem e inscrições para usuários)
-- **Eventos** (CRUD para admins, inscrições para usuários)
-- **Mensagens** (Sistema de chat por esporte)
-- **Inscrições** (Gerenciamento de participações)
-- **Produtos** (Sistema de loja - CRUD para admins, listagem para usuários)
-- **Carrinho** (Gerenciamento de itens para compra)
-- **Pedidos** (Sistema de compras e pagamentos)
+A API do AtleticaHub é um sistema completo de gerenciamento esportivo e e-commerce desenvolvido com **Node.js**, **Express**, **Prisma ORM**, **MongoDB** (para eventos) e **Firebase Authentication**.
 
-### URL Base
+### 🏗️ Arquitetura
+- **Backend**: Node.js + Express
+- **Banco de Dados**: PostgreSQL (via Prisma) + MongoDB (eventos/mensagens)
+- **Autenticação**: Firebase Authentication + JWT
+- **Upload de Arquivos**: Google Cloud Storage
+- **Arquitetura**: Clean Architecture em camadas (Routes → Controllers → Services → Repositories)
+
+### 🎯 Funcionalidades Principais
+- **Sistema de Esportes**: Gerenciamento completo de modalidades esportivas
+- **Eventos Dinâmicos**: Treinos específicos por esporte e eventos gerais
+- **E-commerce Integrado**: Loja com carrinho e sistema de pedidos
+- **Chat por Esporte**: Mensagens organizadas por modalidade
+- **Sistema de Permissões**: Diferentes níveis de acesso (admin/user)
+- **Upload de Imagens**: Suporte a fotos para esportes, eventos e produtos
+
+### 🌐 URL Base
 ```
 http://localhost:3000
 ```
 
-### Autenticação
+### 🔑 Autenticação
 Todas as rotas protegidas requerem um token JWT no header:
 ```
 Authorization: Bearer <token>
 ```
 
+### 🔧 Tecnologias Utilizadas
+- **Express**: Framework web
+- **Prisma**: ORM para PostgreSQL
+- **Mongoose**: ODM para MongoDB
+- **Firebase Admin**: Autenticação e validação
+- **Google Cloud Storage**: Upload de arquivos
+- **Multer**: Middleware para upload
+- **JWT**: Tokens de autenticação
+- **Swagger**: Documentação automática
+
 ---
 
 ## 🔐 Autenticação
 
-### 1. Configuração Firebase
-```javascript
+### 🎯 Sistema Híbrido
+O AtleticaHub utiliza **Firebase Authentication** integrado com **sistema próprio de usuários**, garantindo segurança e flexibilidade.
+
+#### 🔄 Fluxo de Autenticação
+1. **Frontend**: Login via Firebase
+2. **Backend**: Validação do token Firebase
+3. **Sistema**: Geração de JWT próprio
+4. **Banco**: Sincronização com tabela de usuários
+
+### 📡 Endpoints
+
+#### 1. Configuração Firebase
+```http
 GET /config/firebase
 ```
 
-**Resposta:**
+**Descrição**: Retorna configurações públicas do Firebase para inicialização no frontend.
+
+**Resposta de Sucesso (200)**:
 ```json
 {
   "apiKey": "sua-api-key",
   "authDomain": "seu-domain.firebaseapp.com",
-  "projectId": "seu-project-id"
+  "projectId": "seu-project-id",
+  "storageBucket": "seu-bucket.appspot.com",
+  "messagingSenderId": "123456789",
+  "appId": "1:123456789:web:abcdef"
 }
 ```
 
-### 2. Login
-```javascript
+#### 2. Login/Registro
+```http
 POST /auth/login
 Content-Type: application/json
+```
 
+**Body**:
+```json
 {
-  "idToken": "firebase-id-token",
+  "idToken": "firebase-id-token-here",
   "email": "usuario@exemplo.com",
   "displayName": "Nome do Usuário"
 }
 ```
 
-**Resposta de sucesso:**
+**Resposta de Sucesso (200)**:
 ```json
 {
   "success": true,
   "message": "Login realizado com sucesso",
   "token": "jwt-token-do-sistema",
   "user": {
-    "id": 1,
+    "id": "firebase-uid",
     "email": "usuario@exemplo.com",
     "nome": "Nome do Usuário",
     "role": "user",
-    "criadoEm": "2024-01-01T00:00:00.000Z"
+    "dataNascimento": "1990-01-01T00:00:00.000Z",
+    "telefone": "+5511999999999",
+    "curso": "Engenharia",
+    "createdAt": "2024-01-01T00:00:00.000Z"
   }
 }
 ```
 
-### 3. Verificação de Token
-```javascript
-GET /auth/verify
-Authorization: Bearer <token>
+**Resposta de Erro (400)**:
+```json
+{
+  "error": "Token Firebase inválido"
+}
 ```
 
-### 4. Verificação de Usuário/Admin
-```javascript
+#### 3. Verificação de Token
+```http
+GET /auth/verify
+Authorization: Bearer <jwt-token>
+```
+
+**Resposta de Sucesso (200)**:
+```json
+{
+  "valid": true,
+  "user": {
+    "uid": "firebase-uid",
+    "email": "usuario@exemplo.com",
+    "role": "user"
+  }
+}
+```
+
+#### 4. Verificação de Usuário
+```http
 GET /auth/verify-user
+Authorization: Bearer <jwt-token>
+```
+
+**Descrição**: Verifica se o token pertence a um usuário válido.
+
+#### 5. Verificação de Admin
+```http
 GET /auth/verify-admin
-Authorization: Bearer <token>
+Authorization: Bearer <jwt-token>
+```
+
+**Descrição**: Verifica se o token pertence a um administrador.
+
+**Resposta de Erro (403)**:
+```json
+{
+  "error": "Acesso negado. Requer privilégios de administrador."
+}
+```
+
+### 🔒 Níveis de Permissão
+
+| Papel | Descrição | Permissões |
+|-------|-----------|------------|
+| `user` | Usuário padrão | Visualizar, inscrever-se, comprar |
+| `admin` | Administrador | Todas as permissões + CRUD completo |
+
+### 🛡️ Middlewares de Segurança
+
+#### verificarToken
+- Valida JWT em rotas protegidas
+- Adiciona `req.user` com dados do usuário
+
+#### checkRole('admin')
+- Verifica se usuário é administrador
+- Usado em rotas administrativas
+
+### 💡 Exemplo de Implementação (JavaScript)
+
+```javascript
+// Inicialização Firebase (Frontend)
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
+
+const firebaseConfig = await fetch('/config/firebase').then(r => r.json());
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+// Login
+try {
+  const userCredential = await signInWithEmailAndPassword(auth, email, password);
+  const idToken = await userCredential.user.getIdToken();
+  
+  // Enviar para backend
+  const response = await fetch('/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      idToken,
+      email: userCredential.user.email,
+      displayName: userCredential.user.displayName
+    })
+  });
+  
+  const data = await response.json();
+  localStorage.setItem('token', data.token);
+} catch (error) {
+  console.error('Erro no login:', error);
+}
 ```
 
 ---
 
-## 🏃‍♀️ Esportes API
+## 🏃‍♀️ Esportes
 
-### 1. Listar Esportes
-```javascript
+### 🎯 Sistema de Modalidades Esportivas
+Gerenciamento completo de esportes com sistema de inscrições e aprovações.
+
+### 📡 Endpoints
+
+#### 1. Listar Todos os Esportes
+```http
 GET /api/esportes
-Authorization: Bearer <token>
+Authorization: Bearer <jwt-token>
 ```
 
-**Resposta:**
+**Descrição**: Lista todos os esportes disponíveis com informações de inscrições.
+
+**Resposta de Sucesso (200)**:
 ```json
 [
   {
-    "id": 1,
+    "id": "550e8400-e29b-41d4-a716-446655440001",
     "nome": "Futebol",
-    "descricao": "Modalidade de futebol",
-    "foto": "base64-encoded-image",
+    "fotoUrl": "https://storage.googleapis.com/bucket/esportes/futebol.jpg",
     "criadoEm": "2024-01-01T00:00:00.000Z",
     "inscricoes": [
       {
-        "id": 1,
-        "status": "aprovada",
+        "id": "550e8400-e29b-41d4-a716-446655440002",
+        "status": "aceito",
+        "criadaEm": "2024-01-15T00:00:00.000Z",
         "usuario": {
-          "nome": "João Silva"
+          "nome": "João Silva",
+          "email": "joao@exemplo.com"
         }
       }
     ]
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440003",
+    "nome": "Basquete",
+    "fotoUrl": "https://storage.googleapis.com/bucket/esportes/basquete.jpg",
+    "criadoEm": "2024-01-02T00:00:00.000Z",
+    "inscricoes": []
   }
 ]
 ```
 
-### 2. Criar Esporte (Admin apenas)
-```javascript
-POST /api/esportes
-Authorization: Bearer <token>
-Content-Type: multipart/form-data
-
-nome: "Basquete"
-descricao: "Modalidade de basquete"
-foto: [arquivo de imagem]
+#### 2. Buscar Esporte por ID
+```http
+GET /api/esportes/:id
+Authorization: Bearer <jwt-token>
 ```
 
-**Resposta:**
+**Parâmetros**:
+- `id` (string): UUID do esporte
+
+**Resposta de Sucesso (200)**:
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440001",
+  "nome": "Futebol",
+  "fotoUrl": "https://storage.googleapis.com/bucket/esportes/futebol.jpg",
+  "criadoEm": "2024-01-01T00:00:00.000Z",
+  "inscricoes": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440002",
+      "status": "aceito",
+      "usuario": {
+        "nome": "João Silva"
+      }
+    }
+  ]
+}
+```
+
+#### 3. Criar Esporte
+```http
+POST /api/esportes
+Authorization: Bearer <jwt-token> (Admin)
+Content-Type: multipart/form-data
+```
+
+**Campos do FormData**:
+```
+nome: "Vôlei"
+foto: [arquivo-imagem.jpg] (opcional)
+```
+
+**Validações**:
+- Nome é obrigatório e deve ser único
+- Foto deve ser imagem válida (JPG, PNG, GIF)
+- Tamanho máximo: 5MB
+- Apenas administradores podem criar
+
+**Resposta de Sucesso (201)**:
 ```json
 {
   "success": true,
   "message": "Esporte criado com sucesso",
   "esporte": {
-    "id": 2,
-    "nome": "Basquete",
-    "descricao": "Modalidade de basquete",
-    "foto": "base64-encoded-image"
+    "id": "550e8400-e29b-41d4-a716-446655440004",
+    "nome": "Vôlei",
+    "fotoUrl": "https://storage.googleapis.com/bucket/esportes/volei.jpg",
+    "criadoEm": "2024-01-10T00:00:00.000Z"
   }
 }
 ```
 
-### 3. Atualizar Esporte (Admin apenas)
-```javascript
+#### 4. Atualizar Esporte
+```http
 PUT /api/esportes/:id
-Authorization: Bearer <token>
+Authorization: Bearer <jwt-token> (Admin)
 Content-Type: multipart/form-data
-
-nome: "Basquete Atualizado"
-descricao: "Nova descrição"
-foto: [arquivo de imagem opcional]
 ```
 
-### 4. Excluir Esporte (Admin apenas)
-```javascript
+**Campos do FormData**:
+```
+nome: "Vôlei de Praia" (opcional)
+foto: [nova-imagem.jpg] (opcional)
+```
+
+**Resposta de Sucesso (200)**:
+```json
+{
+  "success": true,
+  "message": "Esporte atualizado com sucesso",
+  "esporte": {
+    "id": "550e8400-e29b-41d4-a716-446655440004",
+    "nome": "Vôlei de Praia",
+    "fotoUrl": "https://storage.googleapis.com/bucket/esportes/volei-praia.jpg",
+    "criadoEm": "2024-01-10T00:00:00.000Z"
+  }
+}
+```
+
+#### 5. Excluir Esporte
+```http
 DELETE /api/esportes/:id
-Authorization: Bearer <token>
+Authorization: Bearer <jwt-token> (Admin)
+```
+
+**Validações**:
+- Verifica se existem inscrições ativas
+- Verifica se existem eventos associados
+- Apenas administradores podem excluir
+
+**Resposta de Sucesso (200)**:
+```json
+{
+  "success": true,
+  "message": "Esporte excluído com sucesso"
+}
+```
+
+**Resposta de Erro (400)**:
+```json
+{
+  "error": "Não é possível excluir esporte com inscrições ativas"
+}
+```
+
+### 🔧 Regras de Negócio
+
+#### Criação de Esportes
+- ✅ Apenas administradores
+- ✅ Nome único obrigatório
+- ✅ Upload de foto opcional
+- ✅ Validação de tipo de arquivo
+- ✅ Redimensionamento automático
+
+#### Sistema de Inscrições
+- 📝 Usuários se inscrevem via `/api/inscricoes/:esporteId`
+- ⏳ Status inicial: `pendente`
+- ✅ Admin aprova: `aceito`
+- ❌ Admin rejeita: `rejeitado`
+- 🎯 Apenas usuários aceitos podem participar de treinos
+
+### 💡 Exemplo de Uso (JavaScript)
+
+```javascript
+// Listar esportes
+const esportes = await fetch('/api/esportes', {
+  headers: { 'Authorization': `Bearer ${token}` }
+}).then(r => r.json());
+
+// Criar esporte (Admin)
+const formData = new FormData();
+formData.append('nome', 'Tênis');
+formData.append('foto', fileInput.files[0]);
+
+const novoEsporte = await fetch('/api/esportes', {
+  method: 'POST',
+  headers: { 'Authorization': `Bearer ${adminToken}` },
+  body: formData
+}).then(r => r.json());
+
+// Atualizar esporte
+const formDataUpdate = new FormData();
+formDataUpdate.append('nome', 'Tênis de Mesa');
+
+await fetch(`/api/esportes/${esporteId}`, {
+  method: 'PUT',
+  headers: { 'Authorization': `Bearer ${adminToken}` },
+  body: formDataUpdate
+});
 ```
 
 ---
 
-## 📅 Eventos API
+## 📅 Eventos
 
-### 1. Listar Eventos (Público)
-```javascript
+### 🎯 Sistema Inteligente de Eventos
+Sistema avançado que diferencia **eventos gerais** (abertos a todos) de **treinos específicos** (por esporte) com controle de permissões.
+
+### 🏗️ Tipos de Eventos
+
+#### 1. **Eventos Gerais** (esporteId = "0")
+- **Público**: Todos os usuários autenticados
+- **Tipos**: `reuniao`, `festa`, `confraternizacao`, `palestra`, `workshop`, `assembleia`, `outro`
+- **Acesso**: Qualquer usuário pode se inscrever
+
+#### 2. **Treinos de Esporte** (esporteId ≠ "0")
+- **Público**: Usuários inscritos E aceitos no esporte específico
+- **Tipos**: `treino`
+- **Acesso**: Requer inscrição aprovada no esporte + Admins sempre podem
+
+### 📡 Endpoints
+
+#### 1. Listar Todos os Eventos (Público)
+```http
 GET /api/eventos
 ```
 
-**Resposta:**
+**Descrição**: Lista todos os eventos públicos, sem autenticação necessária.
+
+**Resposta de Sucesso (200)**:
 ```json
 [
   {
@@ -175,230 +465,279 @@ GET /api/eventos
     "tipo": "treino",
     "data": "2024-12-31T18:00:00.000Z",
     "local": "Campo Principal",
-    "esporteId": "123",
-    "criadorId": "admin123",
-    "fotoUrl": "https://storage.googleapis.com/...",
+    "esporteId": "550e8400-e29b-41d4-a716-446655440001",
+    "criadorId": "firebase-admin-uid",
+    "fotoUrl": "https://storage.googleapis.com/bucket/eventos/treino-futebol.jpg",
+    "criadoEm": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z",
     "inscricoes": [
       {
-        "usuarioId": "user123",
+        "usuarioId": "firebase-user-uid",
         "nome": "João Silva",
-        "email": "joao@example.com",
-        "dataInscricao": "2024-01-01T00:00:00.000Z"
+        "email": "joao@exemplo.com",
+        "dataInscricao": "2024-01-15T00:00:00.000Z"
       }
     ]
   },
   {
     "_id": "60f1b2a3c4e5f6a7b8c9d0e2",
     "titulo": "Festa de Confraternização",
-    "descricao": "Festa de final de ano",
+    "descricao": "Festa de final de ano da atlética",
     "tipo": "festa",
     "data": "2024-12-31T20:00:00.000Z",
     "local": "Salão de Festas",
     "esporteId": "0",
-    "criadorId": "admin123",
-    "fotoUrl": "https://storage.googleapis.com/...",
+    "criadorId": "firebase-admin-uid",
+    "fotoUrl": "https://storage.googleapis.com/bucket/eventos/festa.jpg",
+    "criadoEm": "2024-01-01T00:00:00.000Z",
     "inscricoes": []
   }
 ]
 ```
 
-### 2. Listar Eventos por Esporte
-```javascript
+#### 2. Listar Eventos Permitidos para Usuário
+```http
+GET /api/eventos/permitidos
+Authorization: Bearer <jwt-token>
+```
+
+**Descrição**: Lista apenas eventos que o usuário pode se inscrever baseado em suas permissões.
+
+**Lógica de Filtro**:
+- **Admin**: Vê todos os eventos
+- **User**: Vê eventos gerais + treinos dos esportes onde está aceito
+
+#### 3. Listar Eventos por Esporte
+```http
 GET /api/eventos/esporte/:esporteId
 ```
 
-**Exemplo:**
-```javascript
-GET /api/eventos/esporte/1  // Eventos do esporte com ID 1
-GET /api/eventos/esporte/0  // Eventos gerais
+**Parâmetros**:
+- `esporteId` (string): UUID do esporte ou "0" para eventos gerais
+
+**Exemplos**:
+```http
+GET /api/eventos/esporte/550e8400-e29b-41d4-a716-446655440001  # Eventos do futebol
+GET /api/eventos/esporte/0  # Eventos gerais
 ```
 
-### 3. Buscar Evento por ID
-```javascript
+#### 4. Buscar Evento por ID
+```http
 GET /api/eventos/:id
 ```
 
-### 4. Criar Evento (Admin apenas)
-```javascript
+**Parâmetros**:
+- `id` (string): ObjectId do evento MongoDB
+
+#### 5. Criar Evento
+```http
 POST /api/eventos
-Authorization: Bearer <token>
+Authorization: Bearer <jwt-token> (Admin)
 Content-Type: multipart/form-data
+```
 
+**Campos do FormData**:
+```
 titulo: "Novo Evento"
-descricao: "Descrição do evento"
-tipo: "festa" // Determinado automaticamente baseado na seleção do dropdown
-data: "2024-12-31T18:00:00Z"
+descricao: "Descrição detalhada do evento"
+tipo: "festa" | "treino" | "reuniao" | "confraternizacao" | "palestra" | "workshop" | "assembleia" | "outro"
+data: "2024-12-31T18:00:00.000Z"
 local: "Local do evento"
-esporteId: "0" // "0" para eventos gerais, ID do esporte para treinos
-foto: [arquivo de imagem - opcional]
+esporteId: "0" | "uuid-do-esporte"
+foto: [arquivo-imagem.jpg] (opcional)
 ```
 
-**📋 Nova Estrutura de Criação via Interface:**
+**Validações**:
+- ✅ Todos os campos obrigatórios: `titulo`, `data`, `local`, `esporteId`
+- ✅ Data deve ser futura
+- ✅ EsporteId deve existir ou ser "0"
+- ✅ Foto opcional (validação de tipo e tamanho)
+- ✅ Apenas administradores podem criar
 
-**Interface de Criação:**
-1. **Primeiro Dropdown** - Tipo de Evento:
-   - `geral`: Para eventos abertos a todos
-   - `treino`: Para treinos específicos de esporte
-
-2. **Segundo Dropdown** - Depende do primeiro:
-   - Se `geral` → Subtipos: `reuniao`, `festa`, `confraternizacao`, `palestra`, `workshop`, `assembleia`, `outro`
-   - Se `treino` → Lista de esportes disponíveis
-
-**Lógica de Determinação:**
-```javascript
-// Para eventos gerais
-if (tipoEvento === 'geral') {
-  tipo = subtipo; // reuniao, festa, etc.
-  esporteId = '0';
-}
-
-// Para treinos
-if (tipoEvento === 'treino') {
-  tipo = 'treino';
-  esporteId = idDoEsporteSelecionado;
+**Resposta de Sucesso (201)**:
+```json
+{
+  "_id": "60f1b2a3c4e5f6a7b8c9d0e3",
+  "titulo": "Novo Evento",
+  "descricao": "Descrição detalhada do evento",
+  "tipo": "festa",
+  "data": "2024-12-31T18:00:00.000Z",
+  "local": "Local do evento",
+  "esporteId": "0",
+  "criadorId": "firebase-admin-uid",
+  "fotoUrl": "https://storage.googleapis.com/bucket/eventos/novo-evento.jpg",
+  "criadoEm": "2024-01-10T00:00:00.000Z",
+  "inscricoes": []
 }
 ```
 
-**1. Eventos Gerais (esporteId = "0"):**
-- **tipo:** `reuniao`, `festa`, `confraternizacao`, `palestra`, `workshop`, `assembleia`, `outro`
-- **Público:** Todos os usuários podem se inscrever
-
-**2. Treinos de Esporte Específico:**
-- **tipo:** `treino`
-- **esporteId:** ID do esporte específico
-- **Público:** Apenas usuários inscritos E aceitos no esporte
-
-**Exemplos de Criação via API:**
-```javascript
-// Para evento geral (festa)
-const formData = new FormData();
-formData.append('titulo', 'Festa de Confraternização');
-formData.append('descricao', 'Festa de final de ano da atlética');
-formData.append('tipo', 'festa');
-formData.append('esporteId', '0');
-formData.append('data', '2024-12-31T20:00:00Z');
-formData.append('local', 'Salão de Festas');
-
-// Para treino de futebol
-const formData = new FormData();
-formData.append('titulo', 'Treino de Futebol');
-formData.append('descricao', 'Treino técnico semanal');
-formData.append('tipo', 'treino');
-formData.append('esporteId', '123'); // ID do esporte futebol
-formData.append('data', '2024-12-31T18:00:00Z');
-formData.append('local', 'Campo de Futebol');
-```
-
-### 5. Atualizar Evento (Admin apenas)
-```javascript
+#### 6. Atualizar Evento
+```http
 PUT /api/eventos/:id
-Authorization: Bearer <token>
+Authorization: Bearer <jwt-token> (Admin)
 Content-Type: application/json
+```
 
+**Body**:
+```json
 {
   "titulo": "Evento Atualizado",
   "descricao": "Nova descrição",
-  "data": "2024-12-31T18:00:00Z",
+  "data": "2024-12-31T19:00:00.000Z",
   "local": "Novo local"
 }
 ```
 
-### 6. Excluir Evento (Admin apenas)
-```javascript
+#### 7. Excluir Evento
+```http
 DELETE /api/eventos/:id
-Authorization: Bearer <token>
+Authorization: Bearer <jwt-token> (Admin)
 ```
 
-### 7. Inscrever-se em Evento
-```javascript
+**Validações**:
+- ✅ Verifica se evento existe
+- ✅ Remove inscrições associadas
+- ✅ Apenas administradores podem excluir
+
+#### 8. Inscrever-se em Evento
+```http
 POST /api/eventos/:id/inscrever
-Authorization: Bearer <token>
+Authorization: Bearer <jwt-token>
 ```
 
-**⚠️ Regras de Validação e Negócio:**
+**Validações Avançadas**:
+- ✅ Evento deve existir
+- ✅ Usuário não pode estar já inscrito
+- ✅ **Para eventos gerais**: Qualquer usuário autenticado
+- ✅ **Para treinos**: Usuário deve estar aceito no esporte OU ser admin
 
-**Criação de Eventos (Admin apenas):**
-- Todos os campos são obrigatórios: `titulo`, `data`, `local`, `esporteId`
-- Upload de foto é opcional, mas deve ser uma imagem válida
-- Validação automática de arquivo: tamanho e tipo de imagem
+**Resposta de Sucesso (201)**:
+```json
+{
+  "message": "Inscrição realizada com sucesso"
+}
+```
 
-**Inscrição em Eventos:**
-- **Eventos Gerais** (`esporteId = "0"`): Qualquer usuário autenticado pode se inscrever
-- **Eventos de Esporte** (`esporteId ≠ "0"`): 
-  - Usuário deve estar inscrito **E aceito** no esporte específico
-  - Administradores podem se inscrever em qualquer evento
-- **Validações adicionais:**
-  - Usuário não pode se inscrever duas vezes no mesmo evento
-  - Evento deve existir e estar ativo
+**Resposta de Erro (403)**:
+```json
+{
+  "error": "Você precisa estar inscrito no esporte associado a este evento para poder se inscrever."
+}
+```
 
-**Lógica de Verificação de Permissão:**
+#### 9. Cancelar Inscrição
+```http
+DELETE /api/eventos/:id/inscrever
+Authorization: Bearer <jwt-token>
+```
+
+#### 10. Meus Eventos (Usuário)
+```http
+GET /api/eventos/minhas/inscricoes
+Authorization: Bearer <jwt-token>
+```
+
+**Descrição**: Lista eventos em que o usuário está inscrito.
+
+### 🧠 Lógica de Validação de Permissões
+
 ```javascript
-// Pseudocódigo da validação
-if (evento.esporteId !== "0" && usuario.role !== 'admin') {
-  const inscricoes = await buscarInscricoesDoUsuario(usuarioId);
+// Pseudocódigo da validação de inscrição
+async function validarInscricaoEvento(usuario, evento) {
+  // Se for evento geral, libera para qualquer usuário
+  if (evento.esporteId === "0") {
+    return true;
+  }
+  
+  // Se for admin, libera para qualquer evento
+  if (usuario.role === 'admin') {
+    return true;
+  }
+  
+  // Para treinos, verifica se usuário está aceito no esporte
+  const inscricoes = await buscarInscricoesUsuario(usuario.uid);
   const inscricaoAceita = inscricoes.find(
-    inscricao => inscricao.esporteId === evento.esporteId && 
-                 inscricao.status === 'aceito'
+    inscricao => 
+      inscricao.esporteId === evento.esporteId && 
+      inscricao.status === 'aceito'
   );
   
   if (!inscricaoAceita) {
     throw new Error('Você precisa estar inscrito no esporte associado a este evento');
   }
+  
+  return true;
 }
 ```
 
-**Estados de Inscrição em Esportes:**
-- `pendente`: Aguardando aprovação do administrador
-- `aceito`: Aprovado, pode se inscrever em eventos do esporte
-- `rejeitado`: Rejeitado pelo administrador
-
-**Possíveis respostas de erro:**
-```json
-// Erro 403 - Não inscrito no esporte
-{
-  "error": "Você precisa estar inscrito no esporte associado a este evento para poder se inscrever."
-}
-
-// Erro 400 - Já inscrito
-{
-  "error": "Usuário já está inscrito neste evento"
-}
-
-// Erro 404 - Evento não encontrado
-{
-  "error": "Evento não encontrado"
-}
-
-// Erro 400 - Campos obrigatórios
-{
-  "error": "Título, data, local e esporte são obrigatórios."
-}
-```
-
-**🎯 Interface de Administração - Criação de Eventos:**
-
-A interface de administração utiliza dropdowns em cascata para simplificar a criação de eventos:
+### 🎨 Interface de Criação (Frontend)
 
 ```html
-<!-- Primeiro dropdown: Tipo de evento -->
-<select id="eventoTipo" onchange="mostrarSubopcoes()">
-  <option value="">Selecione o tipo de evento...</option>
-  <option value="geral">Geral</option>
-  <option value="treino">Treino</option>
+<!-- Dropdowns em cascata para criação -->
+<select id="tipoEvento" onchange="atualizarSubtipo()">
+  <option value="">Selecione o tipo...</option>
+  <option value="geral">Evento Geral</option>
+  <option value="treino">Treino de Esporte</option>
 </select>
 
-<!-- Segundo dropdown: Dinâmico baseado no primeiro -->
-<select id="eventoSubtipo" style="display: none;">
-  <option value="">Selecione...</option>
-  <!-- Conteúdo carregado dinamicamente -->
+<select id="subtipo" style="display: none;">
+  <!-- Carregado dinamicamente via JavaScript -->
 </select>
 ```
 
-**Função JavaScript para Controle de Dropdowns:**
 ```javascript
-function mostrarSubopcoes() {
-  const tipoSelect = document.getElementById('eventoTipo');
-  const subtipoSelect = document.getElementById('eventoSubtipo');
+function atualizarSubtipo() {
+  const tipo = document.getElementById('tipoEvento').value;
+  const subtipo = document.getElementById('subtipo');
+  
+  if (tipo === 'geral') {
+    subtipo.innerHTML = `
+      <option value="festa">Festa</option>
+      <option value="reuniao">Reunião</option>
+      <option value="confraternizacao">Confraternização</option>
+      <option value="palestra">Palestra</option>
+      <option value="workshop">Workshop</option>
+      <option value="assembleia">Assembleia</option>
+      <option value="outro">Outro</option>
+    `;
+    subtipo.style.display = 'block';
+  } else if (tipo === 'treino') {
+    // Carregar lista de esportes via API
+    carregarEsportes(subtipo);
+  }
+}
+```
+
+### 💡 Exemplos de Uso
+
+```javascript
+// Criar evento geral
+const formData = new FormData();
+formData.append('titulo', 'Festa de Confraternização');
+formData.append('descricao', 'Festa de final de ano');
+formData.append('tipo', 'festa');
+formData.append('esporteId', '0');
+formData.append('data', '2024-12-31T20:00:00.000Z');
+formData.append('local', 'Salão de Festas');
+formData.append('foto', fotoFile);
+
+const evento = await fetch('/api/eventos', {
+  method: 'POST',
+  headers: { 'Authorization': `Bearer ${adminToken}` },
+  body: formData
+});
+
+// Inscrever-se em evento
+await fetch(`/api/eventos/${eventoId}/inscrever`, {
+  method: 'POST',
+  headers: { 'Authorization': `Bearer ${userToken}` }
+});
+
+// Listar eventos permitidos
+const eventosPermitidos = await fetch('/api/eventos/permitidos', {
+  headers: { 'Authorization': `Bearer ${userToken}` }
+}).then(r => r.json());
+```
   const tipoSelecionado = tipoSelect.value;
   
   subtipoSelect.innerHTML = '<option value="">Selecione...</option>';
@@ -492,360 +831,444 @@ Este sistema garante que usuários só possam se inscrever em treinos de esporte
 
 ---
 
-## 📝 Inscrições API
+## 📝 Inscrições
 
-### 1. Criar Inscrição em Esporte
-```javascript
+### 🎯 Sistema de Inscrições em Esportes
+Gerenciamento de participação dos usuários em modalidades esportivas com sistema de aprovação administrativa.
+
+### 📡 Endpoints
+
+#### 1. Inscrever-se em Esporte
+```http
 POST /api/inscricoes/:esporteId
-Authorization: Bearer <token>
+Authorization: Bearer <jwt-token>
 ```
 
-**Resposta:**
+**Parâmetros**:
+- `esporteId` (string): UUID do esporte
+
+**Validações**:
+- ✅ Esporte deve existir
+- ✅ Usuário não pode se inscrever no "Geral" (esporteId = "0")
+- ✅ Usuário não pode ter inscrição duplicada
+- ✅ Status inicial: `pendente`
+
+**Resposta de Sucesso (201)**:
 ```json
 {
-  "success": true,
-  "message": "Inscrição criada com sucesso",
   "inscricao": {
-    "id": 1,
-    "usuarioId": 1,
-    "esporteId": 1,
+    "id": "550e8400-e29b-41d4-a716-446655440005",
+    "usuarioId": "firebase-user-uid",
+    "esporteId": "550e8400-e29b-41d4-a716-446655440001",
     "status": "pendente",
-    "criadoEm": "2024-01-01T00:00:00.000Z"
-  }
+    "criadaEm": "2024-01-15T00:00:00.000Z"
+  },
+  "message": "Inscrição enviada com sucesso! Aguardando aprovação."
 }
 ```
 
-### 2. Listar Minhas Inscrições
-```javascript
+#### 2. Listar Minhas Inscrições
+```http
 GET /api/inscricoes/minhas
-Authorization: Bearer <token>
+Authorization: Bearer <jwt-token>
 ```
 
-**Resposta:**
+**Resposta de Sucesso (200)**:
 ```json
 [
   {
-    "id": 1,
-    "status": "aprovada",
-    "criadoEm": "2024-01-01T00:00:00.000Z",
+    "id": "550e8400-e29b-41d4-a716-446655440005",
+    "status": "aceito",
+    "criadaEm": "2024-01-15T00:00:00.000Z",
     "esporte": {
-      "id": 1,
+      "id": "550e8400-e29b-41d4-a716-446655440001",
       "nome": "Futebol",
-      "descricao": "Modalidade de futebol"
+      "fotoUrl": "https://storage.googleapis.com/bucket/futebol.jpg"
     }
   }
 ]
 ```
 
-### 3. Listar Inscrições Pendentes (Admin apenas)
-```javascript
-GET /api/inscricoes/pendentes/:esporteId
-Authorization: Bearer <token>
+#### 3. Listar Todas as Inscrições (Admin)
+```http
+GET /api/inscricoes
+Authorization: Bearer <jwt-token> (Admin)
 ```
 
-### 4. Atualizar Status da Inscrição (Admin apenas)
-```javascript
-PUT /api/inscricoes/:id
-Authorization: Bearer <token>
-Content-Type: application/json
+**Query Parameters**:
+- `status` (opcional): `pendente`, `aceito`, `rejeitado`
+- `esporteId` (opcional): Filtrar por esporte
 
+**Exemplo**:
+```http
+GET /api/inscricoes?status=pendente&esporteId=550e8400-e29b-41d4-a716-446655440001
+```
+
+#### 4. Gerenciar Inscrição (Admin)
+```http
+PUT /api/inscricoes/:id/status
+Authorization: Bearer <jwt-token> (Admin)
+Content-Type: application/json
+```
+
+**Body**:
+```json
 {
-  "status": "aprovada" // ou "rejeitada"
+  "status": "aceito" | "rejeitado"
 }
 ```
 
----
-
-## 💬 Mensagens API
-
-### 1. Listar Mensagens por Esporte
-```javascript
-GET /api/mensagens/:esporteId
-Authorization: Bearer <token>
+**Resposta de Sucesso (200)**:
+```json
+{
+  "message": "Status da inscrição atualizado com sucesso",
+  "inscricao": {
+    "id": "550e8400-e29b-41d4-a716-446655440005",
+    "status": "aceito",
+    "usuario": {
+      "nome": "João Silva",
+      "email": "joao@exemplo.com"
+    },
+    "esporte": {
+      "nome": "Futebol"
+    }
+  }
+}
 ```
 
-**Resposta:**
+### 🔧 Estados da Inscrição
+
+| Status | Descrição | Permissões |
+|--------|-----------|------------|
+| `pendente` | Aguardando aprovação | Não pode participar de treinos |
+| `aceito` | Aprovado pelo admin | Pode participar de treinos do esporte |
+| `rejeitado` | Rejeitado pelo admin | Não pode participar |
+
+---
+
+## 💬 Mensagens
+
+### 🎯 Sistema de Chat por Esporte
+Chat organizado por modalidades esportivas com mensagens em tempo real.
+
+### 📡 Endpoints
+
+#### 1. Listar Mensagens por Esporte
+```http
+GET /api/mensagens/:esporteId
+Authorization: Bearer <jwt-token>
+```
+
+**Parâmetros**:
+- `esporteId` (string): UUID do esporte ou "0" para chat geral
+
+**Query Parameters**:
+- `limit` (opcional): Número de mensagens (padrão: 50)
+- `offset` (opcional): Paginação (padrão: 0)
+
+**Resposta de Sucesso (200)**:
 ```json
 [
   {
-    "id": 1,
-    "conteudo": "Olá pessoal!",
-    "fixada": false,
-    "criadoEm": "2024-01-01T00:00:00.000Z",
-    "usuario": {
-      "id": 1,
-      "nome": "João Silva",
-      "role": "user"
-    }
+    "_id": "60f1b2a3c4e5f6a7b8c9d0e5",
+    "texto": "Pessoal, treino hoje às 18h!",
+    "usuarioId": "firebase-user-uid",
+    "nomeUsuario": "João Silva",
+    "esporteId": "550e8400-e29b-41d4-a716-446655440001",
+    "criadaEm": "2024-01-15T15:30:00.000Z"
+  },
+  {
+    "_id": "60f1b2a3c4e5f6a7b8c9d0e6",
+    "texto": "Confirmo presença!",
+    "usuarioId": "firebase-user-uid-2",
+    "nomeUsuario": "Maria Santos",
+    "esporteId": "550e8400-e29b-41d4-a716-446655440001",
+    "criadaEm": "2024-01-15T15:35:00.000Z"
   }
 ]
 ```
 
-### 2. Criar Mensagem
-```javascript
-POST /api/mensagens/:esporteId
-Authorization: Bearer <token>
+#### 2. Enviar Mensagem
+```http
+POST /api/mensagens
+Authorization: Bearer <jwt-token>
 Content-Type: application/json
+```
 
+**Body**:
+```json
 {
-  "conteudo": "Nova mensagem no chat!"
+  "texto": "Mensagem a ser enviada",
+  "esporteId": "550e8400-e29b-41d4-a716-446655440001"
 }
 ```
 
-### 3. Editar Mensagem
-```javascript
-PUT /api/mensagens/:id
-Authorization: Bearer <token>
-Content-Type: application/json
+**Validações**:
+- ✅ Texto obrigatório (1-500 caracteres)
+- ✅ EsporteId deve existir ou ser "0"
+- ✅ Usuário deve estar inscrito no esporte (exceto chat geral e admins)
 
+**Resposta de Sucesso (201)**:
+```json
 {
-  "conteudo": "Mensagem editada"
+  "_id": "60f1b2a3c4e5f6a7b8c9d0e7",
+  "texto": "Mensagem a ser enviada",
+  "usuarioId": "firebase-user-uid",
+  "nomeUsuario": "João Silva",
+  "esporteId": "550e8400-e29b-41d4-a716-446655440001",
+  "criadaEm": "2024-01-15T16:00:00.000Z"
 }
 ```
 
-### 4. Excluir Mensagem
-```javascript
+#### 3. Excluir Mensagem
+```http
 DELETE /api/mensagens/:id
-Authorization: Bearer <token>
+Authorization: Bearer <jwt-token>
 ```
 
-### 5. Fixar/Desfixar Mensagem
-```javascript
-PATCH /api/mensagens/:id/fixar
-Authorization: Bearer <token>
-```
+**Validações**:
+- ✅ Usuário só pode excluir próprias mensagens
+- ✅ Admins podem excluir qualquer mensagem
 
 ---
 
-## 🛍️ Produtos API
+## 🛍️ Produtos
 
-### 1. Listar Produtos (Público)
-```javascript
+### 🎯 Sistema de E-commerce
+Loja integrada com gerenciamento completo de produtos, estoque e vendas.
+
+### 📡 Endpoints
+
+#### 1. Listar Produtos (Público)
+```http
 GET /api/produtos
 ```
 
-**Resposta:**
+**Query Parameters**:
+- `page` (opcional): Página (padrão: 1)
+- `limit` (opcional): Itens por página (padrão: 10)
+- `search` (opcional): Busca por nome/descrição
+
+**Resposta de Sucesso (200)**:
 ```json
-[
-  {
-    "id": 1,
-    "nome": "Camiseta do Time",
-    "descricao": "Camiseta oficial da atlética",
-    "preco": 45.90,
-    "estoque": 25,
-    "criadoEm": "2024-01-01T00:00:00.000Z"
-  }
-]
+{
+  "produtos": [
+    {
+      "id": 1,
+      "nome": "Camiseta Atlética",
+      "descricao": "Camiseta oficial da atlética universitária",
+      "preco": 45.99,
+      "estoque": 25,
+      "imagemUrl": "https://storage.googleapis.com/bucket/produtos/camiseta.jpg",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-15T00:00:00.000Z"
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "totalPages": 1
+}
 ```
 
-### 2. Buscar Produto por ID (Público)
-```javascript
+#### 2. Buscar Produto por ID
+```http
 GET /api/produtos/:id
 ```
 
-**Resposta:**
-```json
-{
-  "id": 1,
-  "nome": "Camiseta do Time",
-  "descricao": "Camiseta oficial da atlética",
-  "preco": 45.90,
-  "estoque": 25,
-  "criadoEm": "2024-01-01T00:00:00.000Z"
-}
-```
-
-### 3. Criar Produto (Admin apenas)
-```javascript
+#### 3. Criar Produto (Admin)
+```http
 POST /api/produtos
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "nome": "Nova Camiseta",
-  "descricao": "Descrição do produto",
-  "preco": 39.90,
-  "estoque": 50
-}
+Authorization: Bearer <jwt-token> (Admin)
+Content-Type: multipart/form-data
 ```
 
-**Resposta:**
-```json
-{
-  "id": 2,
-  "nome": "Nova Camiseta",
-  "descricao": "Descrição do produto",
-  "preco": 39.90,
-  "estoque": 50,
-  "criadoEm": "2024-01-01T00:00:00.000Z"
-}
+**Campos do FormData**:
+```
+nome: "Novo Produto"
+descricao: "Descrição detalhada"
+preco: "29.99"
+estoque: "50"
+imagem: [arquivo-imagem.jpg] (opcional)
 ```
 
-### 4. Atualizar Produto (Admin apenas)
-```javascript
+**Validações**:
+- ✅ Nome obrigatório (até 200 caracteres)
+- ✅ Preço obrigatório (> 0)
+- ✅ Estoque obrigatório (≥ 0)
+- ✅ Imagem opcional (validação de tipo e tamanho)
+
+#### 4. Atualizar Produto (Admin)
+```http
 PUT /api/produtos/:id
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "nome": "Camiseta Atualizada",
-  "preco": 42.90,
-  "estoque": 30
-}
+Authorization: Bearer <jwt-token> (Admin)
+Content-Type: multipart/form-data
 ```
 
-### 5. Excluir Produto (Admin apenas)
-```javascript
+#### 5. Excluir Produto (Admin)
+```http
 DELETE /api/produtos/:id
-Authorization: Bearer <token>
-```
-
-**Resposta:**
-```json
-{
-  "message": "Produto removido com sucesso"
-}
+Authorization: Bearer <jwt-token> (Admin)
 ```
 
 ---
 
-## 🛒 Carrinho API
+## 🛒 Carrinho
 
-### 1. Adicionar Item ao Carrinho
-```javascript
+### 🎯 Sistema de Carrinho de Compras
+Gerenciamento de itens para compra com validações de estoque em tempo real.
+
+### 📡 Endpoints
+
+#### 1. Listar Itens do Carrinho
+```http
+GET /api/cart
+Authorization: Bearer <jwt-token>
+```
+
+**Resposta de Sucesso (200)**:
+```json
+[
+  {
+    "id": 1,
+    "studentEmail": "usuario@exemplo.com",
+    "quantidade": 2,
+    "createdAt": "2024-01-15T00:00:00.000Z",
+    "produto": {
+      "id": 1,
+      "nome": "Camiseta Atlética",
+      "preco": 45.99,
+      "estoque": 25,
+      "imagemUrl": "https://storage.googleapis.com/bucket/produtos/camiseta.jpg"
+    }
+  }
+]
+```
+
+#### 2. Adicionar Item ao Carrinho
+```http
 POST /api/cart
-Authorization: Bearer <token>
+Authorization: Bearer <jwt-token>
 Content-Type: application/json
+```
 
+**Body**:
+```json
 {
-  "studentEmail": "usuario@exemplo.com",
   "produtoId": 1,
   "quantidade": 2
 }
 ```
 
-**Resposta:**
+**Validações**:
+- ✅ Produto deve existir
+- ✅ Quantidade deve ser > 0
+- ✅ Estoque suficiente
+- ✅ Se item já existe, soma a quantidade
+
+**Resposta de Sucesso (201)**:
 ```json
 {
   "id": 1,
   "studentEmail": "usuario@exemplo.com",
   "produtoId": 1,
   "quantidade": 2,
-  "produto": {
-    "id": 1,
-    "nome": "Camiseta do Time",
-    "preco": 45.90
-  },
-  "subtotal": 91.80
+  "createdAt": "2024-01-15T00:00:00.000Z"
 }
 ```
 
-### 2. Listar Itens do Carrinho
-```javascript
-GET /api/cart?studentEmail=usuario@exemplo.com
-Authorization: Bearer <token>
-```
-
-**Resposta:**
-```json
-[
-  {
-    "id": 1,
-    "studentEmail": "usuario@exemplo.com",
-    "produtoId": 1,
-    "quantidade": 2,
-    "produto": {
-      "id": 1,
-      "nome": "Camiseta do Time",
-      "preco": 45.90
-    },
-    "subtotal": 91.80
-  }
-]
-```
-
-### 3. Atualizar Item do Carrinho
-```javascript
+#### 3. Atualizar Quantidade
+```http
 PUT /api/cart/:id
-Authorization: Bearer <token>
+Authorization: Bearer <jwt-token>
 Content-Type: application/json
+```
 
+**Body**:
+```json
 {
   "quantidade": 3
 }
 ```
 
-### 4. Remover Item do Carrinho
-```javascript
+#### 4. Remover Item
+```http
 DELETE /api/cart/:id
-Authorization: Bearer <token>
+Authorization: Bearer <jwt-token>
 ```
 
-**Resposta:**
-```json
-{
-  "message": "Item removido do carrinho"
-}
+#### 5. Finalizar Pedido
+```http
+POST /api/cart/finalizar
+Authorization: Bearer <jwt-token>
 ```
 
-### 5. Finalizar Compra (Checkout)
-```javascript
-POST /api/cart/checkout
-Authorization: Bearer <token>
-Content-Type: application/json
+**Validações**:
+- ✅ Carrinho não pode estar vazio
+- ✅ Valida estoque de todos os itens
+- ✅ Calcula total automaticamente
+- ✅ Atualiza estoque dos produtos
+- ✅ Limpa carrinho após sucesso
 
-{
-  "studentEmail": "usuario@exemplo.com"
-}
-```
-
-**Resposta:**
+**Resposta de Sucesso (201)**:
 ```json
 {
   "id": 1,
-  "studentEmail": "usuario@exemplo.com",
-  "total": 91.80,
+  "usuarioId": "firebase-user-uid",
+  "total": 91.98,
   "status": "pendente",
-  "criadoEm": "2024-01-01T00:00:00.000Z",
-  "itens": [
+  "createdAt": "2024-01-15T00:00:00.000Z",
+  "produtos": [
     {
       "produtoId": 1,
       "quantidade": 2,
-      "preco": 45.90,
       "produto": {
-        "nome": "Camiseta do Time"
+        "nome": "Camiseta Atlética",
+        "preco": 45.99
       }
     }
   ]
 }
 ```
 
----
-
-## 📦 Pedidos API
-
-### 1. Listar Meus Pedidos
-```javascript
-GET /api/pedidos?studentEmail=usuario@exemplo.com
-Authorization: Bearer <token>
+#### 6. Limpar Carrinho
+```http
+DELETE /api/cart
+Authorization: Bearer <jwt-token>
 ```
 
-**Resposta:**
+---
+
+## 📋 Pedidos
+
+### 🎯 Sistema de Gerenciamento de Pedidos
+Controle completo de vendas com diferentes status e histórico.
+
+### 📡 Endpoints
+
+#### 1. Listar Meus Pedidos
+```http
+GET /api/pedidos/usuario
+Authorization: Bearer <jwt-token>
+```
+
+**Resposta de Sucesso (200)**:
 ```json
 [
   {
     "id": 1,
-    "studentEmail": "usuario@exemplo.com",
-    "total": 91.80,
+    "usuarioId": "firebase-user-uid",
+    "total": 91.98,
     "status": "pendente",
-    "criadoEm": "2024-01-01T00:00:00.000Z",
-    "itens": [
+    "createdAt": "2024-01-15T00:00:00.000Z",
+    "produtos": [
       {
-        "produtoId": 1,
+        "id": 1,
         "quantidade": 2,
-        "preco": 45.90,
         "produto": {
-          "nome": "Camiseta do Time"
+          "id": 1,
+          "nome": "Camiseta Atlética",
+          "preco": 45.99,
+          "imagemUrl": "https://storage.googleapis.com/bucket/produtos/camiseta.jpg"
         }
       }
     ]
@@ -853,519 +1276,1347 @@ Authorization: Bearer <token>
 ]
 ```
 
-### 2. Buscar Pedido por ID
-```javascript
+#### 2. Listar Todos os Pedidos (Admin)
+```http
+GET /api/pedidos
+Authorization: Bearer <jwt-token> (Admin)
+```
+
+**Query Parameters**:
+- `status` (opcional): `pendente`, `processando`, `enviado`, `entregue`, `cancelado`
+- `page` (opcional): Paginação
+- `limit` (opcional): Itens por página
+
+#### 3. Buscar Pedido por ID
+```http
 GET /api/pedidos/:id
-Authorization: Bearer <token>
+Authorization: Bearer <jwt-token>
 ```
 
-### 3. Processar Pagamento
-```javascript
-POST /api/pedidos/:id/payment
-Authorization: Bearer <token>
+**Validações**:
+- ✅ Usuários só veem próprios pedidos
+- ✅ Admins veem qualquer pedido
+
+#### 4. Atualizar Status do Pedido (Admin)
+```http
+PATCH /api/pedidos/admin/:id/status
+Authorization: Bearer <jwt-token> (Admin)
+Content-Type: application/json
 ```
 
-**Resposta:**
+**Body**:
 ```json
 {
-  "id": 1,
-  "studentEmail": "usuario@exemplo.com",
-  "total": 91.80,
-  "status": "pago",
-  "pagamentoEm": "2024-01-01T12:00:00.000Z"
+  "status": "pendente" | "processando" | "entregue" | "cancelado"
 }
 ```
 
-### 4. Cancelar Pedido
-```javascript
-POST /api/pedidos/:id/cancel
-Authorization: Bearer <token>
-```
-
-**Resposta:**
+**Resposta de Sucesso (200)**:
 ```json
 {
   "id": 1,
-  "studentEmail": "usuario@exemplo.com",
-  "total": 91.80,
-  "status": "cancelado",
-  "canceladoEm": "2024-01-01T12:00:00.000Z"
+  "status": "processando",
+  "total": 91.98,
+  "createdAt": "2024-01-15T00:00:00.000Z",
+  "updatedAt": "2024-01-15T12:00:00.000Z"
 }
 ```
 
-### 5. Listar Todos os Pedidos (Admin apenas)
+#### 5. Listar Pedidos Recentes (Admin)
+```http
+GET /api/pedidos/admin/recentes
+Authorization: Bearer <jwt-token> (Admin)
+```
+
+**Resposta de Sucesso (200)**:
+```json
+{
+  "pedidos": [
+    {
+      "id": 1,
+      "usuarioId": "firebase-user-uid",
+      "usuario": {
+        "nome": "João Silva",
+        "telefone": "+5511999999999"
+      },
+      "total": 91.98,
+      "status": "pendente",
+      "createdAt": "2024-01-15T00:00:00.000Z",
+      "produtos": [
+        {
+          "id": 1,
+          "quantidade": 2,
+          "produto": {
+            "nome": "Camiseta Atlética",
+            "preco": 45.99
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+#### 6. Obter Estatísticas da Loja (Admin)
+```http
+GET /api/pedidos/admin/estatisticas
+Authorization: Bearer <jwt-token> (Admin)
+```
+
+**Resposta de Sucesso (200)**:
+```json
+{
+  "totalPedidos": 150,
+  "vendasMes": 4875.50
+}
+```
+
+#### 7. Relatório de Vendas por Produto (Admin)
+```http
+GET /api/pedidos/admin/relatorio-vendas
+Authorization: Bearer <jwt-token> (Admin)
+```
+
+**Resposta de Sucesso (200)**:
+```json
+{
+  "relatorio": [
+    {
+      "produtoId": 1,
+      "nome": "Camiseta Atlética",
+      "totalVendido": 45,
+      "totalPedidos": 23,
+      "receita": 2069.55
+    },
+    {
+      "produtoId": 2,
+      "nome": "Bermuda Esportiva",
+      "totalVendido": 32,
+      "totalPedidos": 18,
+      "receita": 1599.68
+    }
+  ]
+}
+```
+
+#### 8. Excluir Pedido (Admin)
+```http
+DELETE /api/pedidos/admin/:id
+Authorization: Bearer <jwt-token> (Admin)
+```
+
+**Resposta de Sucesso (200)**:
+```json
+{
+  "message": "Pedido excluído com sucesso"
+}
+```
+
+### 🔧 Status dos Pedidos
+
+| Status | Descrição | Ações Disponíveis |
+|--------|-----------|-------------------|
+| `pendente` | Pedido criado | Admin pode processar |
+| `processando` | Em preparação | Admin pode marcar entregue |
+| `entregue` | Finalizado | Admin pode excluir |
+| `cancelado` | Cancelado | Admin pode excluir |
+
+### 📊 Funcionalidades do Admin Dashboard
+
+#### **Dashboard Principal**
+- **Pedidos Recentes**: Lista dos últimos pedidos com detalhes
+- **Estatísticas**: Total de pedidos e vendas do mês
+- **Relatório de Vendas**: Produtos mais vendidos com receita
+
+#### **Gerenciamento de Pedidos**
+- ✅ **Visualizar Detalhes**: Ver produtos, quantidades e cliente
+- ✅ **Atualizar Status**: Alterar status do pedido
+- ✅ **Excluir Pedidos**: Remover pedidos cancelados/antigos
+- ✅ **Buscar por ID**: Localizar pedido específico
+
+### 💡 Exemplo de Fluxo Completo
+
 ```javascript
-GET /api/pedidos/admin/all
-Authorization: Bearer <token>
+// 1. Adicionar itens ao carrinho
+await fetch('/api/cart', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    produtoId: 1,
+    quantidade: 2
+  })
+});
+
+// 2. Visualizar carrinho
+const carrinho = await fetch('/api/cart', {
+  headers: { 'Authorization': `Bearer ${token}` }
+}).then(r => r.json());
+
+// 3. Finalizar pedido
+const pedido = await fetch('/api/cart/finalizar', {
+  method: 'POST',
+  headers: { 'Authorization': `Bearer ${token}` }
+}).then(r => r.json());
+
+// 4. Admin: Atualizar status
+await fetch(`/api/pedidos/admin/${pedido.id}/status`, {
+  method: 'PATCH',
+  headers: {
+    'Authorization': `Bearer ${adminToken}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({ status: 'processando' })
+});
+
+// 5. Acompanhar pedidos
+const meusPedidos = await fetch('/api/pedidos/meus', {
+  headers: { 'Authorization': `Bearer ${token}` }
+}).then(r => r.json());
 ```
 
 ---
 
-## 🔧 Exemplo de Integração Frontend
+## 🔧 Configurações e Middlewares
 
-### 1. Classe de Serviço Base
+### 🛡️ Middlewares de Segurança
 
+#### 1. Autenticação (`verificarToken`)
+Valida tokens JWT em todas as rotas protegidas.
+
+**Implementação**:
 ```javascript
-class AtleticaHubAPI {
-  constructor() {
-    this.baseURL = 'http://localhost:3000';
-    this.token = localStorage.getItem('atletica_token');
-  }
-
-  // Configurar headers padrão
-  getHeaders(includeAuth = true) {
-    const headers = {
-      'Content-Type': 'application/json'
-    };
+const verificarToken = async (req, res, next) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
     
-    if (includeAuth && this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`;
+    if (!token) {
+      return res.status(401).json({ error: 'Token não fornecido' });
     }
     
-    return headers;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    return res.status(401).json({ error: 'Token inválido' });
+  }
+};
+```
+
+**Uso**:
+```javascript
+// Aplicar em rotas específicas
+router.get('/api/esportes', verificarToken, esporteController.listarTodos);
+
+// Aplicar globalmente
+app.use('/api', verificarToken);
+```
+
+#### 2. Verificação de Permissão (`checkRole`)
+Valida se usuário tem permissão específica.
+
+**Implementação**:
+```javascript
+const checkRole = (requiredRole) => {
+  return (req, res, next) => {
+    if (req.user.role !== requiredRole) {
+      return res.status(403).json({ 
+        error: 'Acesso negado. Permissão insuficiente.' 
+      });
+    }
+    next();
+  };
+};
+```
+
+**Uso**:
+```javascript
+// Apenas administradores
+router.post('/api/esportes', verificarToken, checkRole('admin'), esporteController.criar);
+
+// Múltiplas permissões
+const checkRoles = (roles) => {
+  return (req, res, next) => {
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({ error: 'Acesso negado' });
+    }
+    next();
+  };
+};
+```
+
+#### 3. Upload de Arquivos (`multer`)
+Middleware para upload de imagens com validações.
+
+**Configuração**:
+```javascript
+const multer = require('multer');
+const path = require('path');
+
+const storage = multer.memoryStorage();
+
+const fileFilter = (req, file, cb) => {
+  // Tipos permitidos
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+  
+  if (allowedTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Tipo de arquivo não permitido'), false);
+  }
+};
+
+const upload = multer({
+  storage,
+  fileFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB
+  }
+});
+```
+
+**Uso**:
+```javascript
+// Upload único
+router.post('/api/esportes', 
+  verificarToken, 
+  checkRole('admin'),
+  upload.single('foto'),
+  esporteController.criar
+);
+
+// Upload múltiplo
+router.post('/api/produtos',
+  upload.array('imagens', 5),
+  produtoController.criar
+);
+```
+
+#### 4. Validação de Dados (`express-validator`)
+Validação robusta de entrada de dados.
+
+**Configuração**:
+```javascript
+const { body, validationResult } = require('express-validator');
+
+// Middleware de validação
+const validarCampos = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      error: 'Dados inválidos',
+      details: errors.array()
+    });
+  }
+  next();
+};
+
+// Validações específicas
+const validarEsporte = [
+  body('nome')
+    .trim()
+    .isLength({ min: 2, max: 100 })
+    .withMessage('Nome deve ter entre 2 e 100 caracteres'),
+  body('descricao')
+    .optional()
+    .isLength({ max: 500 })
+    .withMessage('Descrição deve ter no máximo 500 caracteres'),
+  validarCampos
+];
+```
+
+#### 5. Rate Limiting
+Proteção contra spam e ataques.
+
+**Configuração**:
+```javascript
+const rateLimit = require('express-rate-limit');
+
+// Rate limit geral
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 100, // máximo 100 requisições por IP
+  message: {
+    error: 'Muitas requisições. Tente novamente em 15 minutos.'
+  }
+});
+
+// Rate limit para upload
+const uploadLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minuto
+  max: 5, // máximo 5 uploads por minuto
+  message: {
+    error: 'Limite de upload excedido. Aguarde 1 minuto.'
+  }
+});
+
+// Rate limit para login
+const authLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 minutos
+  max: 5, // máximo 5 tentativas de login
+  skipSuccessfulRequests: true
+});
+```
+
+#### 6. CORS (Cross-Origin Resource Sharing)
+Configuração para permitir requisições do frontend.
+
+**Configuração**:
+```javascript
+const cors = require('cors');
+
+const corsOptions = {
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'https://atleticahub.com.br'
+  ],
+  credentials: true,
+  optionsSuccessStatus: 200,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: [
+    'Origin',
+    'X-Requested-With',
+    'Content-Type',
+    'Accept',
+    'Authorization'
+  ]
+};
+
+app.use(cors(corsOptions));
+```
+
+#### 7. Helmet (Segurança de Headers)
+Proteção adicional via headers HTTP.
+
+**Configuração**:
+```javascript
+const helmet = require('helmet');
+
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https://storage.googleapis.com"]
+    }
+  },
+  crossOriginEmbedderPolicy: false
+}));
+```
+
+### 🔗 Ordem de Middlewares
+
+```javascript
+// 1. Middlewares básicos
+app.use(helmet());
+app.use(cors(corsOptions));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
+
+// 2. Rate limiting
+app.use('/api/', generalLimiter);
+app.use('/auth/', authLimiter);
+
+// 3. Rotas públicas
+app.use('/config', configRoutes);
+
+// 4. Rotas com autenticação
+app.use('/api/', verificarToken);
+app.use('/api/esportes', esporteRoutes);
+app.use('/api/eventos', eventoRoutes);
+
+// 5. Middleware de erro (sempre por último)
+app.use(errorHandler);
+```
+
+### 🔧 Variáveis de Ambiente
+
+```bash
+# .env
+PORT=3000
+NODE_ENV=production
+
+# JWT
+JWT_SECRET=sua-chave-super-secreta-aqui
+JWT_EXPIRES_IN=7d
+
+# Firebase
+FIREBASE_PROJECT_ID=seu-project-id
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+FIREBASE_CLIENT_EMAIL=firebase-adminsdk@projeto.iam.gserviceaccount.com
+
+# Google Cloud Storage
+GOOGLE_CLOUD_PROJECT_ID=seu-project-id
+GOOGLE_CLOUD_BUCKET_NAME=atleticahub-uploads
+GOOGLE_APPLICATION_CREDENTIALS=caminho/para/service-account.json
+
+# PostgreSQL (via Prisma)
+DATABASE_URL="postgresql://usuario:senha@localhost:5432/atleticahub"
+
+# MongoDB
+MONGODB_URI="mongodb://localhost:27017/atleticahub-eventos"
+
+# Email (opcional)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=seu-email@gmail.com
+SMTP_PASS=sua-senha-de-app
+
+# URLs
+FRONTEND_URL=http://localhost:3001
+API_BASE_URL=http://localhost:3000
+```
+
+### 📋 Middleware de Log
+
+```javascript
+const winston = require('winston');
+
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.errors({ stack: true }),
+    winston.format.json()
+  ),
+  transports: [
+    new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
+    new winston.transports.File({ filename: 'logs/combined.log' }),
+    new winston.transports.Console({
+      format: winston.format.simple()
+    })
+  ]
+});
+
+// Middleware de log
+app.use((req, res, next) => {
+  logger.info(`${req.method} ${req.url} - ${req.ip}`);
+  next();
+});
+```
+
+---
+
+## 🚨 Códigos de Erro
+
+### 📊 Códigos HTTP Padrão
+
+| Código | Status | Descrição | Uso |
+|--------|--------|-----------|-----|
+| **200** | OK | Sucesso | GET, PUT bem-sucedidos |
+| **201** | Created | Criado | POST bem-sucedido |
+| **204** | No Content | Sem conteúdo | DELETE bem-sucedido |
+| **400** | Bad Request | Dados inválidos | Validação falhou |
+| **401** | Unauthorized | Não autenticado | Token ausente/inválido |
+| **403** | Forbidden | Sem permissão | Acesso negado |
+| **404** | Not Found | Não encontrado | Recurso inexistente |
+| **409** | Conflict | Conflito | Duplicação de dados |
+| **429** | Too Many Requests | Rate limit | Muitas requisições |
+| **500** | Internal Server Error | Erro interno | Falha no servidor |
+
+### 🎯 Estrutura Padrão de Erro
+
+```json
+{
+  "error": "Mensagem de erro legível",
+  "code": "CODIGO_ERRO_ESPECIFICO",
+  "details": "Informações adicionais",
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "path": "/api/esportes",
+  "method": "POST"
+}
+```
+
+### 🔍 Códigos de Erro Específicos
+
+#### Autenticação (AUTH_*)
+```json
+// TOKEN_MISSING
+{
+  "error": "Token de autenticação não fornecido",
+  "code": "AUTH_TOKEN_MISSING"
+}
+
+// TOKEN_INVALID
+{
+  "error": "Token inválido ou expirado",
+  "code": "AUTH_TOKEN_INVALID"
+}
+
+// FIREBASE_TOKEN_INVALID
+{
+  "error": "Token Firebase inválido",
+  "code": "AUTH_FIREBASE_INVALID"
+}
+
+// INSUFFICIENT_PERMISSIONS
+{
+  "error": "Acesso negado. Permissão insuficiente.",
+  "code": "AUTH_INSUFFICIENT_PERMISSIONS"
+}
+```
+
+#### Validação (VALIDATION_*)
+```json
+// REQUIRED_FIELD
+{
+  "error": "Campos obrigatórios não fornecidos",
+  "code": "VALIDATION_REQUIRED_FIELD",
+  "details": {
+    "missing_fields": ["nome", "email"]
+  }
+}
+
+// INVALID_FORMAT
+{
+  "error": "Formato de dados inválido",
+  "code": "VALIDATION_INVALID_FORMAT",
+  "details": {
+    "field": "email",
+    "expected": "email válido",
+    "received": "texto-inválido"
+  }
+}
+
+// FILE_TOO_LARGE
+{
+  "error": "Arquivo muito grande",
+  "code": "VALIDATION_FILE_SIZE",
+  "details": {
+    "max_size": "5MB",
+    "received_size": "8MB"
+  }
+}
+```
+
+#### Recursos (RESOURCE_*)
+```json
+// NOT_FOUND
+{
+  "error": "Esporte não encontrado",
+  "code": "RESOURCE_NOT_FOUND",
+  "details": {
+    "resource": "esporte",
+    "id": "550e8400-e29b-41d4-a716-446655440001"
+  }
+}
+
+// ALREADY_EXISTS
+{
+  "error": "Esporte com este nome já existe",
+  "code": "RESOURCE_ALREADY_EXISTS",
+  "details": {
+    "field": "nome",
+    "value": "Futebol"
+  }
+}
+
+// CONFLICT
+{
+  "error": "Não é possível excluir esporte com inscrições ativas",
+  "code": "RESOURCE_CONFLICT",
+  "details": {
+    "active_inscriptions": 5
+  }
+}
+```
+
+#### Negócio (BUSINESS_*)
+```json
+// INSUFFICIENT_STOCK
+{
+  "error": "Estoque insuficiente para o produto",
+  "code": "BUSINESS_INSUFFICIENT_STOCK",
+  "details": {
+    "produto_id": 1,
+    "estoque_disponivel": 3,
+    "quantidade_solicitada": 5
+  }
+}
+
+// DUPLICATE_INSCRIPTION
+{
+  "error": "Usuário já inscrito neste esporte",
+  "code": "BUSINESS_DUPLICATE_INSCRIPTION",
+  "details": {
+    "esporte_id": "550e8400-e29b-41d4-a716-446655440001",
+    "status_atual": "pendente"
+  }
+}
+
+// EVENT_PERMISSION_DENIED
+{
+  "error": "Você precisa estar inscrito no esporte associado a este evento",
+  "code": "BUSINESS_EVENT_PERMISSION_DENIED",
+  "details": {
+    "esporte_id": "550e8400-e29b-41d4-a716-446655440001",
+    "esporte_nome": "Futebol"
+  }
+}
+```
+
+#### Sistema (SYSTEM_*)
+```json
+// DATABASE_ERROR
+{
+  "error": "Erro interno do banco de dados",
+  "code": "SYSTEM_DATABASE_ERROR",
+  "details": "Entre em contato com o suporte"
+}
+
+// STORAGE_ERROR
+{
+  "error": "Erro ao salvar arquivo",
+  "code": "SYSTEM_STORAGE_ERROR"
+}
+
+// EXTERNAL_SERVICE_ERROR
+{
+  "error": "Serviço Firebase temporariamente indisponível",
+  "code": "SYSTEM_EXTERNAL_SERVICE_ERROR"
+}
+```
+
+### 🔧 Middleware de Tratamento de Erro
+
+```javascript
+const errorHandler = (err, req, res, next) => {
+  let error = {
+    message: err.message || 'Erro interno do servidor',
+    code: err.code || 'SYSTEM_INTERNAL_ERROR',
+    timestamp: new Date().toISOString(),
+    path: req.originalUrl,
+    method: req.method
+  };
+
+  // Log do erro
+  console.error('Error Details:', {
+    error: err.message,
+    stack: err.stack,
+    url: req.originalUrl,
+    method: req.method,
+    user: req.user?.uid || 'anonymous',
+    body: req.body,
+    timestamp: error.timestamp
+  });
+
+  // Personalizar resposta baseada no tipo de erro
+  if (err.name === 'ValidationError') {
+    return res.status(400).json({
+      ...error,
+      code: 'VALIDATION_ERROR',
+      details: err.details
+    });
   }
 
-  // Método genérico para requisições
-  async request(endpoint, options = {}) {
-    const url = `${this.baseURL}${endpoint}`;
+  if (err.name === 'JsonWebTokenError') {
+    return res.status(401).json({
+      ...error,
+      message: 'Token inválido',
+      code: 'AUTH_TOKEN_INVALID'
+    });
+  }
+
+  if (err.name === 'MulterError') {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        ...error,
+        message: 'Arquivo muito grande',
+        code: 'VALIDATION_FILE_SIZE',
+        details: 'Tamanho máximo: 5MB'
+      });
+    }
+  }
+
+  // Erro genérico
+  res.status(err.statusCode || 500).json({
+    error: error.message,
+    code: error.code,
+    timestamp: error.timestamp
+  });
+};
+
+module.exports = errorHandler;
+```
+
+### 📱 Tratamento no Frontend
+
+```javascript
+// Função auxiliar para tratar erros da API
+const handleApiError = (error, showToast = true) => {
+  console.error('API Error:', error);
+  
+  const errorMessage = error.response?.data?.error || 'Erro inesperado';
+  const errorCode = error.response?.data?.code || 'UNKNOWN_ERROR';
+  
+  // Tratar erros específicos
+  switch (errorCode) {
+    case 'AUTH_TOKEN_INVALID':
+      // Redirecionar para login
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+      break;
+      
+    case 'AUTH_INSUFFICIENT_PERMISSIONS':
+      if (showToast) {
+        showErrorToast('Você não tem permissão para esta ação');
+      }
+      break;
+      
+    case 'VALIDATION_REQUIRED_FIELD':
+      const details = error.response?.data?.details;
+      if (details?.missing_fields) {
+        showErrorToast(`Campos obrigatórios: ${details.missing_fields.join(', ')}`);
+      }
+      break;
+      
+    default:
+      if (showToast) {
+        showErrorToast(errorMessage);
+      }
+  }
+  
+  return {
+    message: errorMessage,
+    code: errorCode,
+    details: error.response?.data?.details
+  };
+};
+
+// Uso em requisições
+try {
+  const response = await fetch('/api/esportes', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(data)
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Erro na requisição');
+  }
+  
+  const result = await response.json();
+  return result;
+} catch (error) {
+  return handleApiError(error);
+}
+```
+
+---
+
+## 📚 Guias de Integração
+
+### 🚀 Configuração Inicial do Frontend
+
+#### 1. Configuração do Firebase
+```javascript
+// firebase-config.js
+import { initializeApp } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
+
+let firebaseApp;
+let auth;
+
+const initializeFirebase = async () => {
+  try {
+    // Buscar configuração do backend
+    const response = await fetch('/config/firebase');
+    const config = await response.json();
+    
+    firebaseApp = initializeApp(config);
+    auth = getAuth(firebaseApp);
+    
+    return auth;
+  } catch (error) {
+    console.error('Erro ao inicializar Firebase:', error);
+    throw error;
+  }
+};
+
+export { auth, initializeFirebase };
+```
+
+#### 2. Context de Autenticação (React)
+```javascript
+// AuthContext.js
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { auth, initializeFirebase } from './firebase-config';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+
+const AuthContext = createContext();
+
+export const useAuth = () => useContext(AuthContext);
+
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(localStorage.getItem('token'));
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    initializeFirebase().then(() => {
+      const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        if (firebaseUser) {
+          try {
+            const idToken = await firebaseUser.getIdToken();
+            
+            // Fazer login no backend
+            const response = await fetch('/auth/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                idToken,
+                email: firebaseUser.email,
+                displayName: firebaseUser.displayName
+              })
+            });
+            
+            if (response.ok) {
+              const data = await response.json();
+              setToken(data.token);
+              setUser(data.user);
+              localStorage.setItem('token', data.token);
+            }
+          } catch (error) {
+            console.error('Erro no login:', error);
+          }
+        } else {
+          setUser(null);
+          setToken(null);
+          localStorage.removeItem('token');
+        }
+        setLoading(false);
+      });
+
+      return () => unsubscribe();
+    });
+  }, []);
+
+  const logout = async () => {
+    try {
+      await signOut(auth);
+      setUser(null);
+      setToken(null);
+      localStorage.removeItem('token');
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+    }
+  };
+
+  return (
+    <AuthContext.Provider value={{
+      user,
+      token,
+      loading,
+      logout,
+      isAdmin: user?.role === 'admin'
+    }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+```
+
+#### 3. Hook para Requisições Autenticadas
+```javascript
+// useApi.js
+import { useAuth } from './AuthContext';
+import { useCallback } from 'react';
+
+export const useApi = () => {
+  const { token } = useAuth();
+
+  const apiCall = useCallback(async (url, options = {}) => {
+    const defaultHeaders = {
+      'Content-Type': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` })
+    };
+
     const config = {
       ...options,
       headers: {
-        ...this.getHeaders(options.auth !== false),
+        ...defaultHeaders,
         ...options.headers
       }
     };
 
     try {
-      const response = await fetch(url, config);
-      const data = await response.json();
+      const response = await fetch(`${process.env.REACT_APP_API_URL}${url}`, config);
       
       if (!response.ok) {
-        throw new Error(data.message || 'Erro na requisição');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro na requisição');
       }
-      
-      return data;
+
+      return await response.json();
     } catch (error) {
-      console.error('Erro na API:', error);
+      console.error('API Error:', error);
       throw error;
     }
-  }
-}
+  }, [token]);
+
+  return { apiCall };
+};
 ```
 
-### 2. Serviços Específicos
+### 📱 Exemplos de Implementação
 
+#### 1. Lista de Esportes com Inscrição
 ```javascript
-class EsportesService extends AtleticaHubAPI {
-  // Listar esportes
-  async listarEsportes() {
-    return this.request('/api/esportes');
-  }
+// EsportesList.js
+import React, { useState, useEffect } from 'react';
+import { useApi } from '../hooks/useApi';
+import { useAuth } from '../contexts/AuthContext';
 
-  // Criar esporte (admin)
-  async criarEsporte(formData) {
-    return this.request('/api/esportes', {
-      method: 'POST',
-      body: formData,
-      headers: {
-        'Authorization': `Bearer ${this.token}`
-        // Não incluir Content-Type para FormData
-      }
-    });
-  }
+const EsportesList = () => {
+  const [esportes, setEsportes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const { apiCall } = useApi();
+  const { user } = useAuth();
 
-  // Atualizar esporte (admin)
-  async atualizarEsporte(id, formData) {
-    return this.request(`/api/esportes/${id}`, {
-      method: 'PUT',
-      body: formData,
-      headers: {
-        'Authorization': `Bearer ${this.token}`
-      }
-    });
-  }
+  useEffect(() => {
+    loadEsportes();
+  }, []);
 
-  // Excluir esporte (admin)
-  async excluirEsporte(id) {
-    return this.request(`/api/esportes/${id}`, {
-      method: 'DELETE'
-    });
-  }
-}
+  const loadEsportes = async () => {
+    try {
+      const data = await apiCall('/api/esportes');
+      setEsportes(data);
+    } catch (error) {
+      console.error('Erro ao carregar esportes:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-class EventosService extends AtleticaHubAPI {
-  // Listar eventos (público)
-  async listarEventos() {
-    return this.request('/api/events', { auth: false });
-  }
+  const handleInscricao = async (esporteId) => {
+    try {
+      await apiCall(`/api/inscricoes/${esporteId}`, { method: 'POST' });
+      alert('Inscrição enviada com sucesso!');
+      loadEsportes(); // Recarregar lista
+    } catch (error) {
+      alert(`Erro na inscrição: ${error.message}`);
+    }
+  };
 
-  // Buscar evento por ID
-  async buscarEvento(id) {
-    return this.request(`/api/events/${id}`, { auth: false });
-  }
+  const isUserInscrito = (esporte) => {
+    return esporte.inscricoes?.some(
+      inscricao => inscricao.usuarioId === user?.uid
+    );
+  };
 
-  // Criar evento (admin)
-  async criarEvento(formData) {
-    return this.request('/api/events', {
-      method: 'POST',
-      body: formData,
-      headers: {
-        'Authorization': `Bearer ${this.token}`
-      }
-    });
-  }
+  if (loading) return <div>Carregando...</div>;
 
-  // Inscrever-se em evento
-  async inscreverEvento(id) {
-    return this.request(`/api/events/${id}/inscrever`, {
-      method: 'POST'
-    });
-  }
+  return (
+    <div className="esportes-grid">
+      {esportes.map(esporte => (
+        <div key={esporte.id} className="esporte-card">
+          <img src={esporte.fotoUrl} alt={esporte.nome} />
+          <h3>{esporte.nome}</h3>
+          <p>Inscritos: {esporte.inscricoes?.length || 0}</p>
+          
+          {!isUserInscrito(esporte) ? (
+            <button 
+              onClick={() => handleInscricao(esporte.id)}
+              className="btn-primary"
+            >
+              Inscrever-se
+            </button>
+          ) : (
+            <span className="status-inscrito">✓ Inscrito</span>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
 
-  // Cancelar inscrição
-  async cancelarInscricaoEvento(id) {
-    return this.request(`/api/events/${id}/inscrever`, {
-      method: 'DELETE'
-    });
-  }
-  // Meus eventos
-  async meusEventos() {
-    return this.request('/api/events/minhas/inscricoes');
-  }
-
-  // Listar eventos por esporte
-  async listarEventosPorEsporte(esporteId) {
-    return this.request(`/api/events/esporte/${esporteId}`, { auth: false });
-  }
-}
-
-class InscricoesService extends AtleticaHubAPI {
-  // Criar inscrição
-  async criarInscricao(esporteId) {
-    return this.request(`/api/inscricoes/${esporteId}`, {
-      method: 'POST'
-    });
-  }
-
-  // Minhas inscrições
-  async minhasInscricoes() {
-    return this.request('/api/inscricoes/minhas');
-  }
-
-  // Listar pendentes (admin)
-  async listarPendentes(esporteId) {
-    return this.request(`/api/inscricoes/pendentes/${esporteId}`);
-  }
-
-  // Atualizar status (admin)
-  async atualizarStatus(id, status) {
-    return this.request(`/api/inscricoes/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify({ status })
-    });
-  }
-}
-
-class MensagensService extends AtleticaHubAPI {
-  // Listar mensagens
-  async listarMensagens(esporteId) {
-    return this.request(`/api/mensagens/${esporteId}`);
-  }
-
-  // Criar mensagem
-  async criarMensagem(esporteId, conteudo) {
-    return this.request(`/api/mensagens/${esporteId}`, {
-      method: 'POST',
-      body: JSON.stringify({ conteudo })
-    });
-  }
-
-  // Editar mensagem
-  async editarMensagem(id, conteudo) {
-    return this.request(`/api/mensagens/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify({ conteudo })
-    });
-  }
-
-  // Excluir mensagem
-  async excluirMensagem(id) {
-    return this.request(`/api/mensagens/${id}`, {
-      method: 'DELETE'
-    });
-  }
-
-  // Fixar mensagem
-  async fixarMensagem(id) {
-    return this.request(`/api/mensagens/${id}/fixar`, {
-      method: 'PATCH'
-    });
-  }
-}
-
-class ProdutosService extends AtleticaHubAPI {
-  // Listar produtos
-  async listarProdutos() {
-    return this.request('/api/produtos', { auth: false });
-  }
-
-  // Buscar produto por ID
-  async buscarProduto(id) {
-    return this.request(`/api/produtos/${id}`, { auth: false });
-  }
-
-  // Criar produto (admin)
-  async criarProduto(dados) {
-    return this.request('/api/produtos', {
-      method: 'POST',
-      body: JSON.stringify(dados),
-      headers: {
-        'Authorization': `Bearer ${this.token}`
-      }
-    });
-  }
-
-  // Atualizar produto (admin)
-  async atualizarProduto(id, dados) {
-    return this.request(`/api/produtos/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(dados),
-      headers: {
-        'Authorization': `Bearer ${this.token}`
-      }
-    });
-  }
-
-  // Excluir produto (admin)
-  async excluirProduto(id) {
-    return this.request(`/api/produtos/${id}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${this.token}`
-      }
-    });
-  }
-}
-
-class CarrinhoService extends AtleticaHubAPI {
-  // Adicionar item ao carrinho
-  async adicionarAoCarrinho(produtoId, quantidade) {
-    return this.request('/api/cart', {
-      method: 'POST',
-      body: JSON.stringify({ produtoId, quantidade }),
-      headers: {
-        'Authorization': `Bearer ${this.token}`
-      }
-    });
-  }
-
-  // Listar itens do carrinho
-  async listarItensCarrinho() {
-    return this.request(`/api/cart?studentEmail=${encodeURIComponent(this.token)}`);
-  }
-
-  // Atualizar item do carrinho
-  async atualizarItemCarrinho(id, quantidade) {
-    return this.request(`/api/cart/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify({ quantidade }),
-      headers: {
-        'Authorization': `Bearer ${this.token}`
-      }
-    });
-  }
-
-  // Remover item do carrinho
-  async removerItemCarrinho(id) {
-    return this.request(`/api/cart/${id}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${this.token}`
-      }
-    });
-  }
-
-  // Finalizar compra
-  async finalizarCompra() {
-    return this.request('/api/cart/checkout', {
-      method: 'POST',
-      body: JSON.stringify({ studentEmail: this.token }),
-      headers: {
-        'Authorization': `Bearer ${this.token}`
-      }
-    });
-  }
-}
-
-class PedidosService extends AtleticaHubAPI {
-  // Listar meus pedidos
-  async listarMeusPedidos() {
-    return this.request(`/api/pedidos?studentEmail=${encodeURIComponent(this.token)}`);
-  }
-
-  // Buscar pedido por ID
-  async buscarPedido(id) {
-    return this.request(`/api/pedidos/${id}`);
-  }
-
-  // Processar pagamento
-  async processarPagamento(id) {
-    return this.request(`/api/pedidos/${id}/payment`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.token}`
-      }
-    });
-  }
-
-  // Cancelar pedido
-  async cancelarPedido(id) {
-    return this.request(`/api/pedidos/${id}/cancel`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.token}`
-      }
-    });
-  }
-
-  // Listar todos os pedidos (admin)
-  async listarTodosPedidos() {
-    return this.request('/api/pedidos/admin/all', {
-      headers: {
-        'Authorization': `Bearer ${this.token}`
-      }
-    });
-  }
-}
+export default EsportesList;
 ```
 
-### 3. Exemplo de Uso
-
+#### 2. Carrinho de Compras
 ```javascript
-// Inicializar serviços
-const esportesService = new EsportesService();
-const eventosService = new EventosService();
-const inscricoesService = new InscricoesService();
-const mensagensService = new MensagensService();
-const produtosService = new ProdutosService();
-const carrinhoService = new CarrinhoService();
-const pedidosService = new PedidosService();
+// ShoppingCart.js
+import React, { useState, useEffect } from 'react';
+import { useApi } from '../hooks/useApi';
 
-// Exemplo: Listar esportes e criar inscrição
-async function exemploUso() {
-  try {
-    // Listar esportes
-    const esportes = await esportesService.listarEsportes();
-    console.log('Esportes disponíveis:', esportes);
+const ShoppingCart = () => {
+  const [cartItems, setCartItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const { apiCall } = useApi();
 
-    // Inscrever-se no primeiro esporte
-    if (esportes.length > 0) {
-      const inscricao = await inscricoesService.criarInscricao(esportes[0].id);
-      console.log('Inscrição criada:', inscricao);
+  useEffect(() => {
+    loadCart();
+  }, []);
+
+  const loadCart = async () => {
+    try {
+      const data = await apiCall('/api/cart');
+      setCartItems(data);
+    } catch (error) {
+      console.error('Erro ao carregar carrinho:', error);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    // Listar eventos
-    const eventos = await eventosService.listarEventos();
-    console.log('Eventos disponíveis:', eventos);
-
-    // Listar mensagens de um esporte
-    if (esportes.length > 0) {
-      const mensagens = await mensagensService.listarMensagens(esportes[0].id);
-      console.log('Mensagens do esporte:', mensagens);
+  const updateQuantity = async (itemId, newQuantity) => {
+    try {
+      await apiCall(`/api/cart/${itemId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ quantidade: newQuantity })
+      });
+      loadCart();
+    } catch (error) {
+      alert(`Erro ao atualizar: ${error.message}`);
     }
+  };
 
-    // Listar produtos
-    const produtos = await produtosService.listarProdutos();
-    console.log('Produtos disponíveis:', produtos);
-
-    // Adicionar produto ao carrinho
-    if (produtos.length > 0) {
-      const carrinho = await carrinhoService.adicionarAoCarrinho(produtos[0].id, 2);
-      console.log('Produto adicionado ao carrinho:', carrinho);
+  const removeItem = async (itemId) => {
+    try {
+      await apiCall(`/api/cart/${itemId}`, { method: 'DELETE' });
+      loadCart();
+    } catch (error) {
+      alert(`Erro ao remover: ${error.message}`);
     }
+  };
 
-    // Listar pedidos
-    const pedidos = await pedidosService.listarMeusPedidos();
-    console.log('Meus pedidos:', pedidos);
-  } catch (error) {
-    console.error('Erro:', error.message);
+  const finalizePurchase = async () => {
+    try {
+      const pedido = await apiCall('/api/cart/finalizar', { method: 'POST' });
+      alert(`Pedido #${pedido.id} criado com sucesso!`);
+      loadCart(); // Carrinho será limpo
+    } catch (error) {
+      alert(`Erro na compra: ${error.message}`);
+    }
+  };
+
+  const total = cartItems.reduce((sum, item) => 
+    sum + (item.produto.preco * item.quantidade), 0
+  );
+
+  if (loading) return <div>Carregando carrinho...</div>;
+
+  if (cartItems.length === 0) {
+    return <div>Carrinho vazio</div>;
   }
-}
+
+  return (
+    <div className="shopping-cart">
+      <h2>Meu Carrinho</h2>
+      
+      {cartItems.map(item => (
+        <div key={item.id} className="cart-item">
+          <img src={item.produto.imagemUrl} alt={item.produto.nome} />
+          <div className="item-details">
+            <h4>{item.produto.nome}</h4>
+            <p>Preço: R$ {item.produto.preco.toFixed(2)}</p>
+            
+            <div className="quantity-controls">
+              <button 
+                onClick={() => updateQuantity(item.id, item.quantidade - 1)}
+                disabled={item.quantidade <= 1}
+              >
+                -
+              </button>
+              <span>{item.quantidade}</span>
+              <button 
+                onClick={() => updateQuantity(item.id, item.quantidade + 1)}
+                disabled={item.quantidade >= item.produto.estoque}
+              >
+                +
+              </button>
+            </div>
+            
+            <button 
+              onClick={() => removeItem(item.id)}
+              className="btn-remove"
+            >
+              Remover
+            </button>
+          </div>
+          
+          <div className="item-total">
+            R$ {(item.produto.preco * item.quantidade).toFixed(2)}
+          </div>
+        </div>
+      ))}
+      
+      <div className="cart-summary">
+        <h3>Total: R$ {total.toFixed(2)}</h3>
+        <button 
+          onClick={finalizePurchase}
+          className="btn-primary btn-large"
+        >
+          Finalizar Compra
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default ShoppingCart;
+```
+
+### 🔧 Utilitários e Helpers
+
+#### 1. Formatação de Dados
+```javascript
+// utils/formatters.js
+export const formatDate = (dateString) => {
+  return new Date(dateString).toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
+export const formatCurrency = (value) => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  }).format(value);
+};
+
+export const formatStatus = (status) => {
+  const statusMap = {
+    'pendente': 'Pendente',
+    'aceito': 'Aceito',
+    'rejeitado': 'Rejeitado',
+    'processando': 'Processando',
+    'enviado': 'Enviado',
+    'entregue': 'Entregue',
+    'cancelado': 'Cancelado'
+  };
+  
+  return statusMap[status] || status;
+};
+```
+
+#### 2. Validações
+```javascript
+// utils/validators.js
+export const validateEmail = (email) => {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return re.test(email);
+};
+
+export const validatePassword = (password) => {
+  return password.length >= 6;
+};
+
+export const validateRequired = (value) => {
+  return value && value.trim().length > 0;
+};
+
+export const validateFileType = (file, allowedTypes = ['image/jpeg', 'image/png']) => {
+  return allowedTypes.includes(file.type);
+};
+
+export const validateFileSize = (file, maxSizeMB = 5) => {
+  const maxSizeBytes = maxSizeMB * 1024 * 1024;
+  return file.size <= maxSizeBytes;
+};
 ```
 
 ---
 
-## 🔒 Permissões e Roles
+## 📋 Checklist de Implementação
 
-### Usuário Regular (role: "user")
-- ✅ Listar esportes e eventos
-- ✅ Criar inscrições em esportes
-- ✅ Inscrever-se em eventos
-- ✅ Enviar mensagens
-- ✅ Ver suas próprias inscrições
-- ❌ Criar/editar/excluir esportes ou eventos
-- ❌ Aprovar/rejeitar inscrições
-- ❌ Acessar dados de outros usuários
-- ❌ Acessar painel administrativo
+### ✅ Backend Setup
+- [ ] **Configuração do Ambiente**
+  - [ ] Instalar dependências (`npm install`)
+  - [ ] Configurar variáveis de ambiente (`.env`)
+  - [ ] Configurar Firebase Admin SDK
+  - [ ] Configurar Google Cloud Storage
 
-### Administrador (role: "admin")
-- ✅ Todas as permissões de usuário regular
-- ✅ CRUD completo de esportes
-- ✅ CRUD completo de eventos
-- ✅ Aprovar/rejeitar inscrições
-- ✅ Ver inscrições pendentes
-- ✅ Fixar mensagens
-- ✅ CRUD completo de produtos
-- ✅ Acessar todos os pedidos
-- ✅ Processar pagamentos
-- ✅ Cancelar pedidos
-- ✅ Acessar painel administrativo
+- [ ] **Banco de Dados**
+  - [ ] Configurar PostgreSQL
+  - [ ] Executar migrações Prisma (`npx prisma migrate dev`)
+  - [ ] Configurar MongoDB para eventos
+  - [ ] Verificar conexões
 
----
+- [ ] **Autenticação**
+  - [ ] Configurar Firebase Authentication
+  - [ ] Implementar middleware de autenticação
+  - [ ] Testar login/logout
+  - [ ] Configurar permissões de admin
 
-## 📋 Status de Resposta HTTP
+### ✅ Frontend Setup
+- [ ] **Projeto React**
+  - [ ] Configurar Context de Autenticação
+  - [ ] Implementar interceptadores HTTP
+  - [ ] Configurar roteamento protegido
+  - [ ] Implementar tratamento de erros
 
-- **200**: Sucesso
-- **201**: Recurso criado
-- **400**: Dados inválidos
-- **401**: Não autenticado
-- **403**: Sem permissão (role insuficiente)
-- **404**: Recurso não encontrado
-- **500**: Erro interno do servidor
+- [ ] **Componentes Principais**
+  - [ ] Tela de Login/Registro
+  - [ ] Lista de Esportes
+  - [ ] Sistema de Eventos
+  - [ ] Loja/Carrinho
+  - [ ] Painel Administrativo
 
----
+### ✅ Testes
+- [ ] **Testes de API**
+  - [ ] Autenticação
+  - [ ] CRUD de esportes
+  - [ ] Sistema de inscrições
+  - [ ] Carrinho e pedidos
 
-## 🔄 Fluxo de Trabalho Típico
+- [ ] **Testes de Integração**
+  - [ ] Fluxo completo de compra
+  - [ ] Sistema de permissões
+  - [ ] Upload de arquivos
 
-### Para Usuários:
-1. Fazer login com Firebase
-2. Listar esportes disponíveis
-3. Criar inscrição em esporte(s) de interesse
-4. Aguardar aprovação da inscrição
-5. Participar do chat do esporte
-6. Ver e inscrever-se em eventos
-7. Navegar na loja e adicionar produtos ao carrinho
-8. Finalizar compra e acompanhar pedidos
-
-### Para Administradores:
-1. Fazer login com Firebase
-2. Criar/gerenciar esportes
-3. Criar/gerenciar eventos
-4. Aprovar/rejeitar inscrições pendentes
-5. Moderar mensagens (fixar importantes)
-6. Gerenciar produtos (CRUD)
-7. Acompanhar e gerenciar pedidos
-8. Processar pagamentos e cancelar pedidos se necessário
+### ✅ Deploy
+- [ ] **Produção**
+  - [ ] Configurar CI/CD
+  - [ ] Configurar domínio e SSL
+  - [ ] Monitoramento e logs
+  - [ ] Backup de dados
 
 ---
 
-## ⚠️ Observações Importantes
+## 🎯 Conclusão
 
-1. **Upload de Imagens**: Esportes e eventos aceitam upload de fotos via FormData
-2. **CORS**: Sistema configurado para aceitar requisições do frontend
-3. **Auto-criação de Usuários**: Usuários são criados automaticamente no primeiro login
-4. **Validação Dupla**: Firebase + JWT próprio para maior segurança
-5. **Base64**: Imagens são retornadas em formato base64 nas consultas
-6. **Chat em Tempo Real**: Considere implementar WebSocket para mensagens em tempo real
+Este documento fornece uma visão completa da API do AtleticaHub, incluindo:
 
-Este documento serve como guia completo para integração frontend com a API do AtleticaHub.
+- **Autenticação robusta** com Firebase + JWT
+- **Sistema de esportes** com inscrições e aprovações
+- **Eventos inteligentes** (gerais + treinos por esporte)
+- **E-commerce completo** com carrinho e pedidos
+- **Chat por modalidade** esportiva
+- **Sistema de permissões** (user/admin)
+- **Upload de imagens** com Google Cloud Storage
+- **Documentação completa** de todos os endpoints
+- **Guias de integração** para frontend
+- **Tratamento de erros** padronizado
+- **Exemplos práticos** de implementação
+
+### 🚀 Próximos Passos
+
+1. **Implementar notificações push** para eventos e pedidos
+2. **Sistema de pagamentos** (PIX, cartão)
+3. **Dashboard analítico** para administradores
+4. **App mobile** com React Native
+5. **Sistema de avaliações** de produtos
+6. **Gamificação** com ranking de participação
+
+### 🆘 Suporte
+
+- **Email**: suporte@atleticahub.com.br
+- **Documentação**: https://docs.atleticahub.com.br
+- **GitHub**: https://github.com/atleticahub/backend
+
+---
+
+**AtleticaHub API v1.0** - Desenvolvido com ❤️ para atletas universitários.

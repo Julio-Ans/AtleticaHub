@@ -1199,14 +1199,12 @@
         console.error('Erro ao carregar pedidos recentes:', error);
         document.getElementById('pedidosRecentesContainer').innerHTML = '<p>Erro ao carregar pedidos.</p>';
       }
-    }
-
-    // Atualizar status do pedido
+    }    // Atualizar status do pedido
     async function atualizarStatusPedido(pedidoId, novoStatus) {
       try {
         const token = await firebaseUser.getIdToken();
-        const response = await fetch(`/api/pedidos/${pedidoId}/status`, {
-          method: 'PUT',
+        const response = await fetch(`/api/pedidos/admin/${pedidoId}/status`, {
+          method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`
@@ -1268,10 +1266,9 @@
       if (!confirm('Tem certeza que deseja excluir este pedido?')) {
         return;
       }
-      
-      try {
+        try {
         const token = await firebaseUser.getIdToken();
-        const response = await fetch(`/api/pedidos/${pedidoId}`, {
+        const response = await fetch(`/api/pedidos/admin/${pedidoId}`, {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${token}` }
         });

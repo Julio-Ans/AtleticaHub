@@ -42,6 +42,61 @@ async function listarVendasAdmin(req, res) {
   }
 }
 
+// Buscar pedido por ID (admin ou próprio pedido)
+async function buscarPedidoPorId(req, res) {
+  try {
+    const { id } = req.params;
+    const usuarioId = req.user.uid;
+    const isAdmin = req.user.role === 'admin';
+
+    if (!id || isNaN(id)) {
+      return res.status(400).json({ error: "ID inválido" });
+    }
+
+    const pedido = await prisma.pedido.findUnique({
+      where: { id: parseInt(id) },
+      include: {
+        usuario: {
+          select: {
+            nome: true,
+            telefone: true
+          }
+        },
+        produtos: {
+          include: {
+            produto: {
+              select: {
+                nome: true,
+                preco: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!pedido) {
+      return res.status(404).json({ error: "Pedido não encontrado" });
+    }
+
+    // Verificar se o usuário pode ver este pedido
+    if (!isAdmin && pedido.usuarioId !== usuarioId) {
+      return res.status(403).json({ error: "Acesso negado" });
+    }
+
+    // Formatear resposta para compatibilidade com frontend
+    const pedidoFormatado = {
+      ...pedido,
+      itens: pedido.produtos
+    };
+
+    res.status(200).json({ pedido: pedidoFormatado });
+  } catch (err) {
+    console.error('❌ Erro ao buscar pedido:', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
 async function atualizarStatusPedido(req, res) {
   try {
     const { id } = req.params;
@@ -49,9 +104,7 @@ async function atualizarStatusPedido(req, res) {
 
     if (!id || isNaN(id)) {
       return res.status(400).json({ error: "ID inválido" });
-    }
-
-    if (!["pago", "entregue", "pendente"].includes(status)) {
+    }    if (!["pendente", "processando", "entregue", "cancelado"].includes(status)) {
       return res.status(400).json({ error: "Status inválido" });
     }
 
@@ -76,10 +129,64 @@ async function atualizarStatusPedido(req, res) {
   }
 }
 
+// Listar pedidos recentes para admin
+async function listarPedidosRecentes(req, res) {
+  try {
+    const pedidos = await pedidoService.listarPedidosRecentes(10);
+    res.status(200).json({ pedidos });
+  } catch (err) {
+    console.error('❌ Erro ao listar pedidos recentes:', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// Obter estatísticas da loja para admin
+async function obterEstatisticasLoja(req, res) {
+  try {
+    const estatisticas = await pedidoService.obterEstatisticasLoja();
+    res.status(200).json(estatisticas);
+  } catch (err) {
+    console.error('❌ Erro ao obter estatísticas:', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// Obter relatório de vendas por produto para admin
+async function obterRelatorioVendas(req, res) {
+  try {
+    const relatorio = await pedidoService.obterRelatorioVendasPorProduto();
+    res.status(200).json({ relatorio });
+  } catch (err) {
+    console.error('❌ Erro ao obter relatório de vendas:', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// Excluir pedido (admin)
+async function excluirPedido(req, res) {
+  try {
+    const { id } = req.params;
+
+    if (!id || isNaN(id)) {
+      return res.status(400).json({ error: "ID inválido" });
+    }
+
+    await pedidoService.excluirPedido(parseInt(id));
+    res.status(200).json({ message: 'Pedido excluído com sucesso' });
+  } catch (err) {
+    console.error('❌ Erro ao excluir pedido:', err);
+    res.status(500).json({ error: err.message });
+  }
+}
 
 module.exports = {
   criarPedido,
   listarPedidosUsuario,
   listarVendasAdmin,
-  atualizarStatusPedido
+  buscarPedidoPorId,
+  atualizarStatusPedido,
+  listarPedidosRecentes,
+  obterEstatisticasLoja,
+  obterRelatorioVendas,
+  excluirPedido
 };

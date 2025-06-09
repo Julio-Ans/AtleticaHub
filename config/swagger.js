@@ -40,24 +40,38 @@ module.exports = {
           createdAt: { type: "string", format: "date-time" }
         },
         required: ["studentEmail","produtoId","quantidade"]
-      },
-      Pedido: {
+      },      Pedido: {
         type: "object",
         properties: {
           id: { type: "integer" },
-          studentEmail: { type: "string" },
+          usuarioId: { type: "string" },
+          usuario: {
+            type: "object",
+            properties: {
+              nome: { type: "string" },
+              telefone: { type: "string" }
+            }
+          },
           produtos: {
             type: "array",
             items: {
               type: "object",
               properties: {
+                id: { type: "integer" },
                 produtoId: { type: "integer" },
-                quantidade: { type: "integer" }
+                quantidade: { type: "integer" },
+                produto: {
+                  type: "object",
+                  properties: {
+                    nome: { type: "string" },
+                    preco: { type: "number", format: "float" }
+                  }
+                }
               }
             }
           },
           total: { type: "number", format: "float" },
-          status: { type: "string", enum: ["pendente", "pago", "enviado", "cancelado"] },
+          status: { type: "string", enum: ["pendente", "processando", "entregue", "cancelado"] },
           createdAt: { type: "string", format: "date-time" }
         }
       },
@@ -1187,8 +1201,7 @@ module.exports = {
           "400": { description: "Parâmetro ausente" }
         }
       }
-    },
-    "/api/pedidos/{id}/payment": {
+    },    "/api/pedidos/{id}/payment": {
       post: {
         summary: "Processar pagamento",
         parameters: [
@@ -1215,6 +1228,198 @@ module.exports = {
               }
             }
           },
+          "404": { description: "Pedido não encontrado" }
+        }
+      }
+    },
+    "/api/pedidos/{id}": {
+      get: {
+        summary: "Buscar pedido por ID",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "integer" },
+            description: "ID do pedido"
+          }
+        ],
+        responses: {
+          "200": {
+            description: "Pedido encontrado",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    pedido: { $ref: "#/components/schemas/Pedido" }
+                  }
+                }
+              }
+            }
+          },
+          "403": { description: "Acesso negado" },
+          "404": { description: "Pedido não encontrado" }
+        }
+      }
+    },
+    "/api/pedidos/admin/recentes": {
+      get: {
+        summary: "Listar pedidos recentes (Admin)",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "200": {
+            description: "Lista de pedidos recentes",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    pedidos: {
+                      type: "array",
+                      items: { $ref: "#/components/schemas/Pedido" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": { description: "Acesso negado - somente admin" }
+        }
+      }
+    },
+    "/api/pedidos/admin/estatisticas": {
+      get: {
+        summary: "Obter estatísticas da loja (Admin)",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "200": {
+            description: "Estatísticas da loja",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    totalPedidos: { type: "integer" },
+                    vendasMes: { type: "number", format: "float" }
+                  }
+                }
+              }
+            }
+          },
+          "403": { description: "Acesso negado - somente admin" }
+        }
+      }
+    },
+    "/api/pedidos/admin/relatorio-vendas": {
+      get: {
+        summary: "Relatório de vendas por produto (Admin)",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "200": {
+            description: "Relatório de vendas por produto",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    relatorio: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          produtoId: { type: "integer" },
+                          nome: { type: "string" },
+                          totalVendido: { type: "integer" },
+                          totalPedidos: { type: "integer" },
+                          receita: { type: "number", format: "float" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": { description: "Acesso negado - somente admin" }
+        }
+      }
+    },
+    "/api/pedidos/admin/{id}/status": {
+      patch: {
+        summary: "Atualizar status do pedido (Admin)",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "integer" },
+            description: "ID do pedido"
+          }
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  status: { 
+                    type: "string", 
+                    enum: ["pendente", "processando", "entregue", "cancelado"],
+                    description: "Novo status do pedido"
+                  }
+                },
+                required: ["status"]
+              }
+            }
+          }
+        },
+        responses: {
+          "200": {
+            description: "Status atualizado com sucesso",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/Pedido" }
+              }
+            }
+          },
+          "400": { description: "Status inválido" },
+          "403": { description: "Acesso negado - somente admin" },
+          "404": { description: "Pedido não encontrado" }
+        }
+      }
+    },
+    "/api/pedidos/admin/{id}": {
+      delete: {
+        summary: "Excluir pedido (Admin)",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "integer" },
+            description: "ID do pedido"
+          }
+        ],
+        responses: {
+          "200": {
+            description: "Pedido excluído com sucesso",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    message: { type: "string" }
+                  }
+                }
+              }
+            }
+          },
+          "403": { description: "Acesso negado - somente admin" },
           "404": { description: "Pedido não encontrado" }
         }
       }

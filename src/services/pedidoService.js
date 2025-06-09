@@ -108,9 +108,135 @@ async function listarVendasAgrupadasPorProduto() {
   }));
 }
 
+// Função para buscar pedidos recentes (admin)
+async function listarPedidosRecentes(limite = 10) {
+  try {
+    const pedidos = await prisma.pedido.findMany({
+      take: limite,
+      orderBy: {
+        createdAt: 'desc'
+      },      include: {
+        usuario: {
+          select: {
+            nome: true,
+            telefone: true
+          }
+        },
+        produtos: {
+          include: {
+            produto: {
+              select: {
+                nome: true,
+                preco: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    return pedidos;
+  } catch (error) {
+    console.error('❌ Erro ao listar pedidos recentes:', error);
+    throw new Error('Erro ao buscar pedidos recentes: ' + error.message);
+  }
+}
+
+// Função para buscar estatísticas da loja (admin)
+async function obterEstatisticasLoja() {
+  try {
+    const hoje = new Date();
+    const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+    
+    // Contar total de pedidos
+    const totalPedidos = await prisma.pedido.count();
+    
+    // Calcular vendas do mês atual
+    const vendasMes = await prisma.pedido.aggregate({
+      where: {
+        createdAt: {
+          gte: inicioMes
+        }
+      },
+      _sum: {
+        total: true
+      }
+    });
+
+    return {
+      totalPedidos,
+      vendasMes: vendasMes._sum.total || 0
+    };
+  } catch (error) {
+    console.error('❌ Erro ao obter estatísticas da loja:', error);
+    throw new Error('Erro ao buscar estatísticas: ' + error.message);
+  }
+}
+
+// Função para relatório de vendas por produto (admin)
+async function obterRelatorioVendasPorProduto() {
+  try {
+    const vendas = await prisma.pedidoProduto.groupBy({
+      by: ['produtoId'],
+      _sum: {
+        quantidade: true
+      },
+      _count: {
+        _all: true
+      }
+    });
+
+    const relatorio = await Promise.all(
+      vendas.map(async (venda) => {
+        const produto = await prisma.produto.findUnique({
+          where: { id: venda.produtoId }
+        });
+
+        const receita = (produto?.preco || 0) * (venda._sum.quantidade || 0);
+
+        return {
+          produtoId: venda.produtoId,
+          nome: produto?.nome || 'Produto não encontrado',
+          totalVendido: venda._sum.quantidade || 0,
+          totalPedidos: venda._count._all,
+          receita: receita
+        };
+      })
+    );
+
+    // Ordenar por quantidade vendida (descendente)
+    return relatorio.sort((a, b) => b.totalVendido - a.totalVendido);
+  } catch (error) {
+    console.error('❌ Erro ao obter relatório de vendas:', error);
+    throw new Error('Erro ao gerar relatório de vendas: ' + error.message);
+  }
+}
+
+// Função para excluir pedido (admin)
+async function excluirPedido(pedidoId) {
+  try {    // Primeiro, excluir os produtos relacionados
+    await prisma.pedidoProduto.deleteMany({
+      where: { pedidoId: parseInt(pedidoId) }
+    });
+
+    // Depois, excluir o pedido
+    const pedidoExcluido = await prisma.pedido.delete({
+      where: { id: parseInt(pedidoId) }
+    });
+
+    return pedidoExcluido;
+  } catch (error) {
+    console.error('❌ Erro ao excluir pedido:', error);
+    throw new Error('Erro ao excluir pedido: ' + error.message);
+  }
+}
 
 module.exports = {
   criarPedido,
   listarPedidosUsuario,
-  listarVendasAgrupadasPorProduto
+  listarVendasAgrupadasPorProduto,
+  listarPedidosRecentes,
+  obterEstatisticasLoja,
+  obterRelatorioVendasPorProduto,
+  excluirPedido
 };

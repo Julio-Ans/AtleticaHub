@@ -5,10 +5,9 @@ class CartItemRepository {
   async create(data) { 
     return await prisma.cartItem.create({ data }); 
   }
-
-  async findByEmail(email) {
+  async findByUserId(usuarioId) {
     return await prisma.cartItem.findMany({
-        where: { studentEmail: email },
+        where: { usuarioId: usuarioId },
         include: { produto: true },
     });
   }
@@ -20,10 +19,10 @@ class CartItemRepository {
     });
   }
 
-  async findByEmailAndProduct(email, produtoId) {
+  async findByUserAndProduct(usuarioId, produtoId) {
     return await prisma.cartItem.findFirst({
         where: { 
-          studentEmail: email,
+          usuarioId: usuarioId,
           produtoId: produtoId 
         },
         include: { produto: true },
@@ -40,9 +39,8 @@ class CartItemRepository {
   async deleteById(id) { 
     return await prisma.cartItem.delete({ where: { id } }); 
   }
-  
-  async deleteByEmail(email) {
-    return await prisma.cartItem.deleteMany({ where: { studentEmail: email } });
+    async deleteByUserId(usuarioId) {
+    return await prisma.cartItem.deleteMany({ where: { usuarioId: usuarioId } });
   }
 }
 

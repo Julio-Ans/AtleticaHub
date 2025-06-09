@@ -16,7 +16,8 @@ router.put('/:id', verificarToken, cartController.atualizarQuantidade);
 router.delete('/:id', verificarToken, cartController.remover);
 
 // Finalizar pedido (checkout)
-router.post('/checkout', verificarToken, cartController.checkout);
+router.post('/finalizar', verificarToken, cartController.checkout);
+router.post('/checkout', verificarToken, cartController.checkout); // Compatibilidade
 
 // Limpar carrinho
 router.delete('/', verificarToken, cartController.limpar);

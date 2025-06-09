@@ -3,7 +3,7 @@ const cartItemRepository = require('../repositories/cartItemRepository');
 const pedidoRepository = require('../repositories/pedidoRepository');
 
 class CartService {
-  async adicionarItem({ studentEmail, produtoId, quantidade }) {
+  async adicionarItem({ usuarioId, produtoId, quantidade }) {
     // Validar se o produto existe
     const produto = await produtoRepository.findById(produtoId);
     if (!produto) {
@@ -16,7 +16,7 @@ class CartService {
     }
 
     // Verificar se o item já existe no carrinho
-    const itemExistente = await cartItemRepository.findByEmailAndProduct(studentEmail, produtoId);
+    const itemExistente = await cartItemRepository.findByUserAndProduct(usuarioId, produtoId);
     
     if (itemExistente) {
       // Se já existe, atualizar quantidade
@@ -30,12 +30,12 @@ class CartService {
       return await cartItemRepository.updateQuantity(itemExistente.id, novaQuantidade);
     } else {
       // Se não existe, criar novo item
-      return await cartItemRepository.create({ studentEmail, produtoId, quantidade });
+      return await cartItemRepository.create({ usuarioId, produtoId, quantidade });
     }
   }
 
-  async listarItens(email) {
-    return await cartItemRepository.findByEmail(email);
+  async listarItens(usuarioId) {
+    return await cartItemRepository.findByUserId(usuarioId);
   }
 
   async atualizarQuantidade(id, quantidade) {
@@ -62,10 +62,9 @@ class CartService {
 
     return await cartItemRepository.deleteById(id);
   }
-
-  async finalizarPedido(usuarioId, studentEmail) {
+  async finalizarPedido(usuarioId) {
     // Buscar itens do carrinho
-    const items = await cartItemRepository.findByEmail(studentEmail);
+    const items = await cartItemRepository.findByUserId(usuarioId);
     if (!items.length) {
       throw new Error('Carrinho vazio');
     }
@@ -91,7 +90,9 @@ class CartService {
         produtoId: produto.id, 
         quantidade: item.quantidade 
       });
-    }    // Criar pedido com os produtos
+    }
+
+    // Criar pedido com os produtos
     const pedido = await pedidoRepository.create({
       usuarioId,
       total,
@@ -111,13 +112,13 @@ class CartService {
     }
 
     // Limpar carrinho
-    await cartItemRepository.deleteByEmail(studentEmail);
+    await cartItemRepository.deleteByUserId(usuarioId);
 
     return pedido;
   }
 
-  async limparCarrinho(email) {
-    return await cartItemRepository.deleteByEmail(email);
+  async limparCarrinho(usuarioId) {
+    return await cartItemRepository.deleteByUserId(usuarioId);
   }
 }
 
