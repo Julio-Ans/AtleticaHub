@@ -26,7 +26,9 @@ async function criarPedido({ usuarioId, itens, total }) {
 
 async function listarPedidosUsuario(usuarioId) {
   try {
-    console.log('🔍 Buscando pedidos para usuário:', usuarioId);    // Verificar se o usuário existe na tabela Usuario usando o UID do Firebase
+    console.log('🔍 Buscando pedidos para usuário:', usuarioId);
+    
+    // Verificar se o usuário existe na tabela Usuario usando o UID do Firebase
     const usuarioExiste = await prisma.usuario.findUnique({
       where: { id: usuarioId }
     });
@@ -36,22 +38,39 @@ async function listarPedidosUsuario(usuarioId) {
       return []; // Retorna array vazio se usuário não existe
     }
     
-    const pedidos = await prisma.pedido.findMany({
-      where: { usuarioId },
-      include: {
-        produtos: {
-          include: {
-            produto: true
+    // Query mais defensiva - testar se a relação funciona
+    try {
+      const pedidos = await prisma.pedido.findMany({
+        where: { usuarioId },
+        include: {
+          produtos: {
+            include: {
+              produto: true
+            }
           }
+        },
+        orderBy: {
+          createdAt: 'desc'
         }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
-    
-    console.log('✅ Pedidos encontrados:', pedidos.length);
-    return pedidos;
+      });
+      
+      console.log('✅ Pedidos encontrados:', pedidos.length);
+      return pedidos;
+      
+    } catch (includeError) {
+      console.error('❌ Erro com include, tentando query simples:', includeError.message);
+      
+      // Fallback: query sem includes se a relação falhar
+      const pedidosSimples = await prisma.pedido.findMany({
+        where: { usuarioId },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      });
+      
+      console.log('⚠️ Retornando pedidos sem produtos (fallback):', pedidosSimples.length);
+      return pedidosSimples;
+    }
     
   } catch (error) {
     console.error('❌ Erro ao listar pedidos do usuário:', error);

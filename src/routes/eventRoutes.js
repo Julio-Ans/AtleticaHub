@@ -3,7 +3,6 @@ const router = express.Router();
 const verificarToken = require('../middlewares/verificarToken');
 const checkRole = require('../middlewares/checkRole');
 const eventoController = require('../controllers/eventoController');
-const eventInscricaoController = require('../controllers/eventInscricaoController');
 const multer = require('multer');
 const path = require('path');
 

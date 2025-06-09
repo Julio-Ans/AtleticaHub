@@ -2,7 +2,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 class CartItemRepository {
-  async add(data) { 
+  async create(data) { 
     return await prisma.cartItem.create({ data }); 
   }
 
@@ -20,17 +20,28 @@ class CartItemRepository {
     });
   }
 
-  async updateQty(id, quantidade) {
+  async findByEmailAndProduct(email, produtoId) {
+    return await prisma.cartItem.findFirst({
+        where: { 
+          studentEmail: email,
+          produtoId: produtoId 
+        },
+        include: { produto: true },
+    });
+  }
+
+  async updateQuantity(id, quantidade) {
     return await prisma.cartItem.update({
         where: { id },
         data: { quantidade },
     });
   }
 
-  async remove(id) { 
+  async deleteById(id) { 
     return await prisma.cartItem.delete({ where: { id } }); 
   }
-  async clearCart(email) {
+  
+  async deleteByEmail(email) {
     return await prisma.cartItem.deleteMany({ where: { studentEmail: email } });
   }
 }

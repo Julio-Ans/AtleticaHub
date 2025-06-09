@@ -1,99 +1,142 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const cartService = require('../services/cartService');
 
-exports.listCart = async (req, res) => {
-  try {
-    // user autenticado, sempre usar o email do token!
-    const studentEmail = req.user.email;
-    const items = await prisma.cartItem.findMany({
-      where: { studentEmail },
-      include: { produto: true }
-    });
-    res.json(items);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Erro ao buscar carrinho' });
-  }
-};
-
-exports.addToCart = async (req, res) => {
-  try {
-    const studentEmail = req.user.email;
-    const { produtoId, quantidade } = req.body;
-
-    const produto = await prisma.produto.findUnique({ where: { id: produtoId } });
-    if (!produto) return res.status(404).json({ error: 'Produto não encontrado' });
-    if (produto.estoque < quantidade)
-      return res.status(400).json({ error: 'Estoque insuficiente' });
-
-    const cartItem = await prisma.cartItem.create({
-      data: { studentEmail, produtoId, quantidade }
-    });
-    res.status(201).json(cartItem);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Erro ao adicionar ao carrinho' });
-  }
-};
-
-exports.removeFromCart = async (req, res) => {
-  try {
-    const id = parseInt(req.params.id);
-    await prisma.cartItem.delete({ where: { id } });
-    res.status(204).send();
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Erro ao remover item' });
-  }
-};
-
-exports.checkout = async (req, res) => {
-  try {
-    const usuarioId = req.user.uid;      // UID do Firebase
-    const studentEmail = req.user.email; // E-mail do usuário
-
-    // Busca os itens do carrinho desse usuário
-    const items = await prisma.cartItem.findMany({
-      where: { studentEmail },
-      include: { produto: true }
-    });
-    if (!items.length) return res.status(400).json({ error: 'Carrinho vazio!' });
-
-    // Verifica estoque e calcula total
-    let total = 0;
-    const produtosPedido = [];
-    for (const item of items) {
-      if (item.produto.estoque < item.quantidade) {
-        return res.status(400).json({ error: `Estoque insuficiente para ${item.produto.nome}` });
-      }
-      total += item.produto.preco * item.quantidade;
-      produtosPedido.push({
-        produtoId: item.produto.id,
-        quantidade: item.quantidade
-      });
-      // Atualiza estoque do produto
-      await prisma.produto.update({
-        where: { id: item.produto.id },
-        data: { estoque: item.produto.estoque - item.quantidade }
-      });
+module.exports = {
+  // Listar itens do carrinho
+  async listar(req, res) {
+    try {
+      const studentEmail = req.user.email;
+      const items = await cartService.listarItens(studentEmail);
+      res.json(items);
+    } catch (err) {
+      console.error('Erro ao listar carrinho:', err);
+      res.status(500).json({ error: 'Erro ao buscar carrinho' });
     }
+  },
 
-    // Cria pedido e itens de pedido
-    const pedido = await prisma.pedido.create({
-      data: {
-        usuarioId,
-        total,
-        status: 'pendente',
-        produtos: { create: produtosPedido }
+  // Adicionar item ao carrinho
+  async adicionar(req, res) {
+    try {
+      const studentEmail = req.user.email;
+      const { produtoId, quantidade } = req.body;
+
+      // Validações básicas
+      if (!produtoId || !quantidade) {
+        return res.status(400).json({ error: 'Produto e quantidade são obrigatórios' });
       }
-    });
 
-    // Limpa carrinho desse usuário
-    await prisma.cartItem.deleteMany({ where: { studentEmail } });
+      if (quantidade <= 0) {
+        return res.status(400).json({ error: 'Quantidade deve ser maior que zero' });
+      }
 
-    res.status(201).json(pedido);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Erro ao finalizar pedido' });
+      const cartItem = await cartService.adicionarItem({
+        studentEmail,
+        produtoId: parseInt(produtoId),
+        quantidade: parseInt(quantidade)
+      });
+
+      res.status(201).json(cartItem);
+    } catch (err) {
+      console.error('Erro ao adicionar ao carrinho:', err);
+      
+      if (err.message.includes('não encontrado')) {
+        return res.status(404).json({ error: err.message });
+      }
+      
+      if (err.message.includes('insuficiente')) {
+        return res.status(400).json({ error: err.message });
+      }
+      
+      res.status(500).json({ error: 'Erro ao adicionar ao carrinho' });
+    }
+  },
+
+  // Atualizar quantidade de um item
+  async atualizarQuantidade(req, res) {
+    try {
+      const { id } = req.params;
+      const { quantidade } = req.body;
+
+      // Validações básicas
+      if (!quantidade || quantidade <= 0) {
+        return res.status(400).json({ error: 'Quantidade deve ser maior que zero' });
+      }
+
+      const item = await cartService.atualizarQuantidade(
+        parseInt(id), 
+        parseInt(quantidade)
+      );
+
+      res.json(item);
+    } catch (err) {
+      console.error('Erro ao atualizar quantidade:', err);
+      
+      if (err.message.includes('não encontrado')) {
+        return res.status(404).json({ error: err.message });
+      }
+      
+      if (err.message.includes('insuficiente')) {
+        return res.status(400).json({ error: err.message });
+      }
+      
+      res.status(500).json({ error: 'Erro ao atualizar quantidade' });
+    }
+  },
+
+  // Remover item do carrinho
+  async remover(req, res) {
+    try {
+      const { id } = req.params;
+      
+      await cartService.removerItem(parseInt(id));
+      res.status(204).send();
+    } catch (err) {
+      console.error('Erro ao remover item:', err);
+      
+      if (err.message.includes('não encontrado')) {
+        return res.status(404).json({ error: err.message });
+      }
+      
+      res.status(500).json({ error: 'Erro ao remover item' });
+    }
+  },
+
+  // Finalizar pedido (checkout)
+  async checkout(req, res) {
+    try {
+      const usuarioId = req.user.uid;
+      const studentEmail = req.user.email;
+
+      const pedido = await cartService.finalizarPedido(usuarioId, studentEmail);
+
+      res.status(201).json({
+        pedido,
+        message: 'Pedido finalizado com sucesso!'
+      });
+    } catch (err) {
+      console.error('Erro ao finalizar pedido:', err);
+      
+      if (err.message.includes('vazio')) {
+        return res.status(400).json({ error: err.message });
+      }
+      
+      if (err.message.includes('insuficiente')) {
+        return res.status(400).json({ error: err.message });
+      }
+      
+      res.status(500).json({ error: 'Erro ao finalizar pedido' });
+    }
+  },
+
+  // Limpar carrinho
+  async limpar(req, res) {
+    try {
+      const studentEmail = req.user.email;
+      
+      await cartService.limparCarrinho(studentEmail);
+      res.json({ message: 'Carrinho limpo com sucesso' });
+    } catch (err) {
+      console.error('Erro ao limpar carrinho:', err);
+      res.status(500).json({ error: 'Erro ao limpar carrinho' });
+    }
   }
 };

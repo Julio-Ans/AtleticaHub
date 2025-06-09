@@ -3,42 +3,71 @@ const cartItemRepository = require('../repositories/cartItemRepository');
 const pedidoRepository = require('../repositories/pedidoRepository');
 
 class CartService {
-  async addToCart({ studentEmail, produtoId, quantidade }) {
+  async adicionarItem({ studentEmail, produtoId, quantidade }) {
+    // Validar se o produto existe
     const produto = await produtoRepository.findById(produtoId);
     if (!produto) {
-      throw { status: 404, message: 'Produto não encontrado' };
-    }
-    if (produto.estoque < quantidade) {
-      throw { status: 400, message: 'Estoque insuficiente' };
+      throw new Error('Produto não encontrado');
     }
 
-    return await cartItemRepository.add({ studentEmail, produtoId, quantidade });
+    // Validar estoque
+    if (produto.estoque < quantidade) {
+      throw new Error('Estoque insuficiente');
+    }
+
+    // Verificar se o item já existe no carrinho
+    const itemExistente = await cartItemRepository.findByEmailAndProduct(studentEmail, produtoId);
+    
+    if (itemExistente) {
+      // Se já existe, atualizar quantidade
+      const novaQuantidade = itemExistente.quantidade + quantidade;
+      
+      // Validar estoque para a nova quantidade
+      if (produto.estoque < novaQuantidade) {
+        throw new Error('Estoque insuficiente para a quantidade solicitada');
+      }
+      
+      return await cartItemRepository.updateQuantity(itemExistente.id, novaQuantidade);
+    } else {
+      // Se não existe, criar novo item
+      return await cartItemRepository.create({ studentEmail, produtoId, quantidade });
+    }
   }
 
-  async getCart(email) {
+  async listarItens(email) {
     return await cartItemRepository.findByEmail(email);
   }
 
-  async updateCartItem(id, quantidade) {
+  async atualizarQuantidade(id, quantidade) {
+    // Buscar o item no carrinho
     const item = await cartItemRepository.findById(id);
     if (!item) {
-      throw { status: 404, message: 'Item não encontrado' };
+      throw new Error('Item não encontrado no carrinho');
     }
+
+    // Validar estoque
     if (item.produto.estoque < quantidade) {
-      throw { status: 400, message: 'Estoque insuficiente' };
+      throw new Error('Estoque insuficiente');
     }
 
-    return await cartItemRepository.updateQty(id, quantidade);
+    return await cartItemRepository.updateQuantity(id, quantidade);
   }
 
-  async removeCartItem(id) {
-    return await cartItemRepository.remove(id);
+  async removerItem(id) {
+    // Verificar se o item existe
+    const item = await cartItemRepository.findById(id);
+    if (!item) {
+      throw new Error('Item não encontrado no carrinho');
+    }
+
+    return await cartItemRepository.deleteById(id);
   }
 
-  async checkout(studentEmail) {
+  async finalizarPedido(usuarioId, studentEmail) {
+    // Buscar itens do carrinho
     const items = await cartItemRepository.findByEmail(studentEmail);
     if (!items.length) {
-      throw { status: 400, message: 'Carrinho vazio' };
+      throw new Error('Carrinho vazio');
     }
 
     let total = 0;
@@ -46,37 +75,49 @@ class CartService {
 
     // Validar estoque e calcular total
     for (const item of items) {
-      if (item.produto.estoque < item.quantidade) {
-        throw { status: 400, message: `Estoque insuficiente para ${item.produto.nome}` };
+      // Buscar produto atualizado para garantir estoque atual
+      const produto = await produtoRepository.findById(item.produto.id);
+      
+      if (!produto) {
+        throw new Error(`Produto ${item.produto.nome} não foi encontrado`);
+      }
+      
+      if (produto.estoque < item.quantidade) {
+        throw new Error(`Estoque insuficiente para ${produto.nome}. Disponível: ${produto.estoque}, Solicitado: ${item.quantidade}`);
       }
 
-      total += item.produto.preco * item.quantidade;
+      total += produto.preco * item.quantidade;
       produtosPedido.push({ 
-        produtoId: item.produto.id, 
+        produtoId: produto.id, 
         quantidade: item.quantidade 
       });
-    }
-
-    // Criar pedido
+    }    // Criar pedido com os produtos
     const pedido = await pedidoRepository.create({
-      studentEmail,
-      produtos: produtosPedido,
+      usuarioId,
       total,
-      status: 'pendente'
+      status: 'pendente',
+      produtos: { 
+        create: produtosPedido 
+      }
     });
 
     // Atualizar estoque dos produtos
     for (const item of items) {
+      const produto = await produtoRepository.findById(item.produto.id);
       await produtoRepository.updateStock(
-        item.produto.id,
-        item.produto.estoque - item.quantidade
+        produto.id,
+        produto.estoque - item.quantidade
       );
     }
 
     // Limpar carrinho
-    await cartItemRepository.clearCart(studentEmail);
+    await cartItemRepository.deleteByEmail(studentEmail);
 
     return pedido;
+  }
+
+  async limparCarrinho(email) {
+    return await cartItemRepository.deleteByEmail(email);
   }
 }
 
