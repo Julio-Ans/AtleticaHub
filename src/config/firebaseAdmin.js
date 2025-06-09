@@ -50,6 +50,7 @@ try {
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
     databaseURL: "https://atleticahub-7b449-default-rtdb.firebaseio.com/",
+    storageBucket: "atleticahub-7b449.firebasestorage.app"
   });
   
   console.log('Firebase Admin inicializado com sucesso!');

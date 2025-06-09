@@ -20,7 +20,7 @@ const criarProduto = async (req, res) => {
       }
     });
 
-    const imagemUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(firebaseFileName)}?alt=media`;
+    const imagemUrl = `https://firebasestorage.googleapis.com/v0/b/atleticahub-7b449.firebasestorage.app/o/${encodeURIComponent(firebaseFileName)}?alt=media`;
 
     const novoProduto = await prisma.produto.create({
       data: {
@@ -108,7 +108,7 @@ const editarProduto = async (req, res) => {
         }
       });
 
-      dadosAtualizados.imagemUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(firebaseFileName)}?alt=media`;
+      dadosAtualizados.imagemUrl = `https://firebasestorage.googleapis.com/v0/b/atleticahub-7b449.firebasestorage.app/o/${encodeURIComponent(firebaseFileName)}?alt=media`;
     }
 
     // Atualiza produto no Prisma

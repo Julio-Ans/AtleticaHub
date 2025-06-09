@@ -147,9 +147,8 @@
       
       <button type="submit"><span id="spinner" class="spinner"></span>Entrar</button>
     </form>
-    
-    <div class="links">
-      <p>Não tem uma conta? <a href="/signup">Cadastre-se</a></p>
+      <div class="links">
+      <p>Não tem uma conta? <a href="/register">Cadastre-se</a></p>
     </div>
   </div>
 
@@ -219,13 +218,19 @@
               const errorData = await apiRes.json();
               throw new Error(errorData.error || 'Erro na autenticação');
             }
+              const userData = await apiRes.json();
             
-            const userData = await apiRes.json();
+            // DEBUG: Log para verificar o que está sendo retornado
+            console.log('🔍 Dados retornados pelo login:', userData);
+            console.log('🔍 Role detectado:', userData.role);
+            console.log('🔍 Usuário:', userData.user);
             
             // Redirecionar com base no papel
             if (userData.role === 'admin') {
+              console.log('✅ Redirecionando para admin dashboard');
               window.location.href = '/admin-dashboard';
             } else {
+              console.log('✅ Redirecionando para user dashboard');
               window.location.href = '/user-dashboard';
             }
           } catch (err) {

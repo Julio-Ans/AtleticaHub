@@ -1,4 +1,4 @@
-const admin = require('../config/firebaseAdmin');
+const { admin } = require('../config/firebaseAdmin');
 const authService = require('../services/authService');
 const userRepository = require('../repositories/userRepository');
 
@@ -144,9 +144,17 @@ class AuthController {
           return res.status(500).json({
             success: false,
             error: 'Erro ao criar usuário no sistema.'
-          });
-        }
-      }      res.status(200).json({
+          });        }
+      }
+
+      // DEBUG: Log para verificar dados do usuário
+      console.log('🔍 DEBUG Login - Dados do usuário:', {
+        id: usuario.id,
+        nome: usuario.nome,
+        role: usuario.role
+      });
+
+      res.status(200).json({
         success: true,
         message: 'Login realizado com sucesso',
         user: usuario,

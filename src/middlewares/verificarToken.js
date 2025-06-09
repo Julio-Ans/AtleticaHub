@@ -1,5 +1,6 @@
 const { admin } = require('../config/firebaseAdmin');
 const { PrismaClient } = require('@prisma/client');
+const userRepository = require('../repositories/userRepository');
 const prisma = new PrismaClient();
 
 async function verificarToken(req, res, next) {

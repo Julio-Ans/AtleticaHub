@@ -4,7 +4,9 @@ const path = require('path');
 const cors = require('cors');
 const swaggerUi = require('swagger-ui-express');
 const swaggerDocument = require('../config/swagger');
+const { PrismaClient } = require('@prisma/client');
 
+const prisma = new PrismaClient();
 const firebaseCfg = require('./config/firebaseClient');
 const connectMongoDB = require('./config/mongodb');
 
@@ -12,9 +14,9 @@ const mensagemRoutes = require('./routes/mensagemRoutes');
 const inscricaoRoutes = require('./routes/inscricaoRoutes');
 const esporteRoutes = require('./routes/esporteRoutes');
 const eventRoutes = require('./routes/eventRoutes');
-const produtoRoutes = require('./routes/produtoRoutes');
+const produtoRoutes = require('./routes/produtosRoutes');
 const cartRoutes = require('./routes/cartRoutes');
-const pedidoRoutes = require('./routes/pedidoRoutes');
+const pedidoRoutes = require('./routes/pedidosRoutes');
 
 // Importar rotas de autenticação
 const authRoutes = require('./routes/authRoutes');
@@ -92,51 +94,14 @@ app.use('/api/eventos', eventRoutes);
 // 📚 Swagger Docs
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
-// 🛒 Produtos
-const produtoRoutes = require('./routes/produtosRoutes');
+// 🛒 Produtos (já declarado no topo do arquivo)
 app.use('/api/produtos', produtoRoutes);
 
-// 🛍 Carrinho
-const cartRoutes = require('./routes/cartRoutes');
+// 🛍 Carrinho (já declarado no topo do arquivo)
 app.use('/api/cart', cartRoutes);
 
-// Pedidos
-const pedidosRoutes = require('./routes/pedidosRoutes'); // ajuste o caminho se for diferente
-app.use('/api/pedidos', pedidosRoutes);
-
-
-app.get('/api/cart', async (req, res, next) => {
-  try {
-    const { studentEmail } = req.query;
-    if (!studentEmail) return res.status(400).json({ error: 'studentEmail é obrigatório' });
-    const items = await prisma.cartItem.findMany({ where: { studentEmail }, include: { produto: true } });
-    res.json(items);
-  } catch (err) {
-    next(err);
-  }
-});
-
-// 📦 Pedidos
-app.get('/api/pedidos', async (req, res, next) => {
-  try {
-    const { studentEmail } = req.query;
-    if (!studentEmail) return res.status(400).json({ error: 'studentEmail é obrigatório' });
-    const pedidos = await prisma.pedido.findMany({ where: { studentEmail } });
-    res.json(pedidos);
-  } catch (err) {
-    next(err);
-  }
-});
-
-app.post('/api/pedidos/:id/payment', async (req, res, next) => {
-  try {
-    const id = Number(req.params.id);
-    const pedido = await prisma.pedido.update({ where: { id }, data: { status: 'pago' } });
-    res.json({ message: 'Pagamento processado', pedido });
-  } catch (err) {
-    next(err);
-  }
-});
+// Pedidos (já declarado no topo do arquivo)
+app.use('/api/pedidos', pedidoRoutes);
 
 // 🧯 Global error handler
 app.use((err, req, res, next) => {

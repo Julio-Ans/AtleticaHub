@@ -1,4 +1,4 @@
-const admin = require('../config/firebaseAdmin');
+const { admin } = require('../config/firebaseAdmin');
 const userRepository = require('../repositories/userRepository');
 
 async function checkEmailDomain(email) {

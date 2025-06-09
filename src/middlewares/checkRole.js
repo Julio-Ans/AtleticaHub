@@ -4,11 +4,11 @@ const userRepository = require('../repositories/userRepository');
 function checkRole(requiredRole) {
   return (req, res, next) => {
     try {
-      if (!req.usuario) {
+      if (!req.user) {
         return res.status(401).json({ error: 'Usuário não autenticado' });
       }
 
-      if (req.usuario.role !== requiredRole) {
+      if (req.user.role !== requiredRole) {
         return res.status(403).json({ error: 'Acesso negado: Permissão insuficiente' });
       }
 
