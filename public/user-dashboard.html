@@ -1514,9 +1514,8 @@
           const error = await response.json();
           throw new Error(error.error || 'Erro ao processar pedido');
         }
-        
-        const resultado = await response.json();
-        showAlert('produtosAlert', 'Pedido realizado com sucesso! Número: ' + resultado.pedido.id, 'success');
+          const resultado = await response.json();
+        showAlert('produtosAlert', 'Pedido realizado com sucesso! Número: ' + resultado.id, 'success');
         
         // Limpar carrinho e recarregar pedidos
         limparCarrinho();
@@ -1539,9 +1538,7 @@
         if (!response.ok) {
           throw new Error('Erro ao carregar pedidos');
         }
-        
-        const data = await response.json();
-        const pedidos = data.pedidos || [];
+          const pedidos = await response.json();
         
         const container = document.getElementById('meusPedidosContainer');
         
@@ -1560,12 +1557,11 @@
             </div>
             <div style="font-size: 14px; color: var(--secondary-color);">
               Data: ${new Date(pedido.createdAt).toLocaleDateString('pt-BR')}
-            </div>
-            ${pedido.itens && pedido.itens.length > 0 ? `
+            </div>            ${pedido.produtos && pedido.produtos.length > 0 ? `
               <div style="margin-top: 10px;">
                 <strong>Itens:</strong>
                 <ul style="margin: 5px 0; padding-left: 20px;">
-                  ${pedido.itens.map(item => `
+                  ${pedido.produtos.map(item => `
                     <li>${item.produto ? item.produto.nome : 'Produto não encontrado'} - Qtd: ${item.quantidade}</li>
                   `).join('')}
                 </ul>

@@ -97,17 +97,12 @@ class EventoService {
       // Verificar se o usuário já está inscrito
       const jaInscrito = evento.inscricoes.some(
         inscricao => inscricao.usuarioId === usuarioData.usuarioId
-      );
-
-      if (jaInscrito) {
+      );      if (jaInscrito) {
         throw new Error('Usuário já está inscrito neste evento');
       }
 
-      // Verificar se o evento já passou
-      if (new Date(evento.data) < new Date()) {
-        throw new Error('Não é possível se inscrever em evento que já passou');
-      }
-
+      // Removida verificação de data - permite inscrição em qualquer evento
+      
       const inscricaoData = {
         ...usuarioData,
         dataInscricao: new Date()

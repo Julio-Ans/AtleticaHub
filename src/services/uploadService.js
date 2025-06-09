@@ -36,7 +36,6 @@ class UploadService {
       throw new Error('Erro interno do serviço de upload');
     }
   }
-
   /**
    * Deletar arquivo do Firebase Storage
    * @param {string} fileUrl - URL do arquivo a ser deletado
@@ -46,10 +45,16 @@ class UploadService {
     try {
       if (!fileUrl) return true;
 
-      // Extrair nome do arquivo da URL
-      const fileName = fileUrl.split('/').pop();
-      const file = this.bucket.file(fileName);
+      // Extrair path correto da URL do Firebase Storage
+      const match = fileUrl.match(/\/o\/(.+)\?alt=media/);
+      const firebasePath = match && match[1] ? decodeURIComponent(match[1]) : null;
 
+      if (!firebasePath) {
+        console.warn('Não foi possível extrair o path do arquivo da URL:', fileUrl);
+        return false;
+      }
+
+      const file = this.bucket.file(firebasePath);
       await file.delete();
       return true;
     } catch (error) {
