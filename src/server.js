@@ -29,11 +29,46 @@ connectMongoDB().then(() => {
 
 // Configuração CORS para permitir acesso da aplicação Next.js
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:3001', process.env.FRONTEND_URL].filter(Boolean),
+  origin: [
+    'http://localhost:3000', 
+    'http://localhost:3001', 
+    process.env.FRONTEND_URL,
+    process.env.VERCEL_URL,
+    'https://aletica-hub-etya.vercel.app'
+  ].filter(Boolean),
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Access-Control-Allow-Origin'],
+  optionsSuccessStatus: 200
 }));
+
+// Middleware adicional para tratar preflight requests
+app.use((req, res, next) => {
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    process.env.FRONTEND_URL,
+    process.env.VERCEL_URL,
+    'https://aletica-hub-etya.vercel.app'
+  ].filter(Boolean);
+
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+  
+  next();
+});
 
 // Middlewares
 app.use(express.json());
@@ -55,10 +90,26 @@ app.get('/config/firebase', (req, res) => {
 
 // Rota para testar se o CORS está funcionando corretamente
 app.get('/api/cors-test', (req, res) => {
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    process.env.FRONTEND_URL,
+    process.env.VERCEL_URL,
+    'https://aletica-hub-etya.vercel.app'
+  ].filter(Boolean);
+
   res.json({
     message: 'Conexão CORS bem-sucedida!',
     origin: req.headers.origin || 'Origem não detectada',
-    timestamp: new Date().toISOString()
+    allowedOrigins: allowedOrigins,
+    corsHeaders: {
+      'access-control-allow-origin': res.getHeader('Access-Control-Allow-Origin'),
+      'access-control-allow-credentials': res.getHeader('Access-Control-Allow-Credentials'),
+      'access-control-allow-methods': res.getHeader('Access-Control-Allow-Methods'),
+      'access-control-allow-headers': res.getHeader('Access-Control-Allow-Headers')
+    },
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
   });
 });
 
