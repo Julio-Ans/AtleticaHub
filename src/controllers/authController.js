@@ -101,23 +101,14 @@ class AuthController {
       console.error('Erro no registro:', error);
       return AuthController.handleError(res, error);
     }
-  }
-
-  /**
+  }  /**
    * Login via API
    */
   static async login(req, res) {
     try {
-      const { idToken } = req.body;
-
-      if (!idToken) {
-        return res.status(400).json({
-          success: false,
-          error: 'Token de autenticação é obrigatório'
-        });
-      }      // Verificar token
-      const decodedToken = await admin.auth().verifyIdToken(idToken);
-      const uid = decodedToken.uid;
+      // Token já verificado pelo middleware verificarToken
+      const uid = req.user.uid;
+      const email = req.user.email;
       
       // Buscar usuário
       let usuario = await userRepository.findById(uid);
@@ -126,11 +117,11 @@ class AuthController {
       if (!usuario) {
         try {
           // Buscar dados do usuário no Firebase
-          const firebaseUser = await admin.auth().getUser(decodedToken.uid);
+          const firebaseUser = await admin.auth().getUser(uid);
           
           // Criar usuário no banco com dados mínimos
           usuario = await userRepository.create({
-            id: decodedToken.uid,
+            id: uid,
             nome: firebaseUser.displayName || firebaseUser.email || 'Usuário',
             dataNascimento: new Date('1990-01-01'), // Data padrão
             telefone: firebaseUser.phoneNumber || 'Não informado',
@@ -138,54 +129,42 @@ class AuthController {
             role: 'user' // Padrão como usuário comum
           });
           
-          console.log(`Usuário criado automaticamente no login: ${usuario.nome} (${usuario.id})`);
+          console.log(`✅ Usuário criado automaticamente: ${usuario.nome} (${usuario.id})`);
         } catch (createErr) {
-          console.error('Erro ao criar usuário no banco durante login:', createErr);
+          console.error('❌ Erro ao criar usuário no banco:', createErr);
           return res.status(500).json({
             success: false,
-            error: 'Erro ao criar usuário no sistema.'
-          });        }
+            error: 'Erro ao criar usuário no sistema.',
+            code: 'USER_CREATION_ERROR'
+          });
+        }
       }
-
-      // DEBUG: Log para verificar dados do usuário
-      console.log('🔍 DEBUG Login - Dados do usuário:', {
-        id: usuario.id,
-        nome: usuario.nome,
-        role: usuario.role
-      });
 
       res.status(200).json({
         success: true,
         message: 'Login realizado com sucesso',
         user: usuario,
-        role: usuario.role // Adicionar role diretamente para o frontend
-      });} catch (error) {
-      console.error('Erro no login:', error);
+        role: usuario.role
+      });
+    } catch (error) {
+      console.error('❌ Erro no login:', error);
       return AuthController.handleError(res, error);
     }
   }
-
   /**
    * Verificar token
    */
   static async verify(req, res) {
     try {
-      const { idToken } = req.body;
-
-      if (!idToken) {
-        return res.status(400).json({
-          success: false,
-          error: 'Token é obrigatório'
-        });
-      }
-
-      const decodedToken = await admin.auth().verifyIdToken(idToken);
+      // Token já verificado pelo middleware verificarToken
+      const uid = req.user.uid;
+      const email = req.user.email;
       
       res.status(200).json({
         success: true,
         message: 'Token válido',
-        uid: decodedToken.uid,
-        email: decodedToken.email
+        uid: uid,
+        email: email
       });
 
     } catch (error) {
@@ -197,21 +176,13 @@ class AuthController {
       });
     }
   }
-
   /**
    * Obter perfil do usuário
    */
   static async profile(req, res) {
     try {
-      const { idToken } = req.body;
-
-      if (!idToken) {
-        return res.status(400).json({
-          success: false,
-          error: 'Token é obrigatório'
-        });
-      }      const decodedToken = await admin.auth().verifyIdToken(idToken);
-      const uid = decodedToken.uid;
+      // Token já verificado pelo middleware verificarToken
+      const uid = req.user.uid;
       
       const usuario = await userRepository.findById(uid);
 
@@ -225,28 +196,20 @@ class AuthController {
       res.status(200).json({
         success: true,
         user: usuario
-      });    } catch (error) {
+      });
+    } catch (error) {
       console.error('Erro ao buscar perfil:', error);
       return AuthController.handleError(res, error);
     }
   }
-
   /**
    * Atualizar perfil do usuário
    */
   static async updateProfile(req, res) {
     try {
-      const { idToken, nome, telefone, curso } = req.body;
-
-      if (!idToken) {
-        return res.status(400).json({
-          success: false,
-          error: 'Token é obrigatório'
-        });
-      }
-
-      const decodedToken = await admin.auth().verifyIdToken(idToken);
-      const uid = decodedToken.uid;
+      // Token já verificado pelo middleware verificarToken
+      const uid = req.user.uid;
+      const { nome, telefone, curso } = req.body;
 
       // Preparar dados para atualização
       const updateData = {};
@@ -267,7 +230,8 @@ class AuthController {
         success: true,
         message: 'Perfil atualizado com sucesso',
         user: usuario
-      });    } catch (error) {
+      });
+    } catch (error) {
       console.error('Erro ao atualizar perfil:', error);
       return AuthController.handleError(res, error);
     }
@@ -294,11 +258,15 @@ class AuthController {
       });
     }
   }
-
   /**
    * Tratar erros de autenticação
    */
   static handleError(res, error) {
+    // Log do erro apenas no desenvolvimento
+    if (process.env.NODE_ENV === 'development') {
+      console.error('🔧 [DEV] Erro de autenticação:', error);
+    }
+
     // Erros específicos do Firebase
     if (error.code === 'auth/email-already-exists') {
       return res.status(409).json({
@@ -324,22 +292,24 @@ class AuthController {
     if (error.code === 'auth/id-token-expired') {
       return res.status(401).json({
         success: false,
-        error: 'Token expirado. Faça login novamente'
+        error: 'Sessão expirada. Faça login novamente',
+        code: 'TOKEN_EXPIRED'
       });
     }
     
     if (error.code === 'auth/invalid-id-token') {
       return res.status(401).json({
         success: false,
-        error: 'Token inválido'
+        error: 'Token inválido',
+        code: 'INVALID_TOKEN'
       });
     }
 
-    // Erro genérico
+    // Erro genérico - mais amigável
     return res.status(500).json({
       success: false,
-      error: 'Erro interno do servidor',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: 'Erro temporário. Tente novamente em alguns instantes.',
+      code: 'TEMPORARY_ERROR'
     });
   }
 }
