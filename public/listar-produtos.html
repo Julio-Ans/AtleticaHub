@@ -114,47 +114,78 @@
         headers: { Authorization: `Bearer ${token}` }
       });
       return res.ok;
-    }
-
-    async function carregarProdutos(token) {
+    }    async function carregarProdutos(token) {
+      console.log('📦 Carregando produtos...');
       const tabelaBody = document.querySelector('#tabelaProdutos tbody');
-      const res = await fetch('/api/produtos');
-      const produtos = await res.json();
+      
+      try {
+        // Adiciona timestamp para evitar cache
+        const res = await fetch(`/api/produtos?t=${Date.now()}`, {
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        });
+        
+        if (!res.ok) {
+          throw new Error(`Erro HTTP: ${res.status}`);
+        }
+        
+        const produtos = await res.json();
+        console.log('📦 Produtos carregados:', produtos.length);
 
-      tabelaBody.innerHTML = '';
-      produtos.forEach(produto => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${produto.id}</td>
-          <td><img src="${produto.imagemUrl}" alt="Imagem" /></td>
-          <td>${produto.nome}</td>
-          <td>${produto.descricao}</td>
-          <td>R$ ${produto.preco.toFixed(2)}</td>
-          <td>${produto.estoque}</td>
-          <td class="actions">
-            <button class="edit-btn" onclick="editarProduto(${produto.id})">Editar</button>
-            <button class="delete-btn" onclick="excluirProduto(${produto.id}, '${token}')">Excluir</button>
-          </td>
-        `;
-        tabelaBody.appendChild(tr);
-      });
+        tabelaBody.innerHTML = '';
+        produtos.forEach(produto => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${produto.id}</td>
+            <td><img src="${produto.imagemUrl}" alt="Imagem" /></td>
+            <td>${produto.nome}</td>
+            <td>${produto.descricao}</td>
+            <td>R$ ${produto.preco.toFixed(2)}</td>
+            <td>${produto.estoque}</td>
+            <td class="actions">
+              <button class="edit-btn" onclick="editarProduto(${produto.id})">Editar</button>
+              <button class="delete-btn" onclick="excluirProduto(${produto.id}, '${token}')">Excluir</button>
+            </td>
+          `;
+          tabelaBody.appendChild(tr);
+        });
+      } catch (error) {
+        console.error('❌ Erro ao carregar produtos:', error);
+        tabelaBody.innerHTML = '<tr><td colspan="7">Erro ao carregar produtos</td></tr>';
+      }
     }
 
     function editarProduto(id) {
       window.location.href = `/editar-produto.html?id=${id}`;
-    }
-
-    async function excluirProduto(id, token) {
+    }    async function excluirProduto(id, token) {
       if (confirm('Deseja realmente excluir este produto?')) {
-        const res = await fetch(`/api/produtos/${id}`, {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (res.ok) {
-          alert('✅ Produto removido com sucesso!');
-          location.reload();
-        } else {
-          alert('❌ Erro ao excluir produto.');
+        try {
+          console.log('🗑️ Iniciando exclusão do produto ID:', id);
+          
+          const res = await fetch(`/api/produtos/${id}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          
+          console.log('📡 Resposta da API:', res.status, res.statusText);
+          
+          if (res.ok) {
+            const result = await res.json();
+            console.log('✅ Sucesso:', result);
+            alert('✅ Produto removido com sucesso!');
+            
+            // Força recarregamento completo da página
+            window.location.reload(true);
+          } else {
+            const erro = await res.json();
+            console.error('❌ Erro da API:', erro);
+            alert('❌ Erro ao excluir produto: ' + (erro.error || 'Erro desconhecido'));
+          }
+        } catch (error) {
+          console.error('❌ Erro na requisição:', error);
+          alert('❌ Erro de conexão ao excluir produto: ' + error.message);
         }
       }
     }

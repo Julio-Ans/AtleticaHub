@@ -84,7 +84,10 @@ const editarProduto = async (req, res) => {
         try {
           await uploadService.deleteFile(produto.imagemUrl);
         } catch (err) {
-          console.warn('⚠️ Falha ao remover imagem antiga do Firebase:', err.message);
+          // Só mostra warning se não for erro 404 (arquivo não encontrado)
+          if (!(err.code === 404 || err.code === '404' || err.message?.includes('No such object'))) {
+            console.warn('⚠️ Falha ao remover imagem antiga do Firebase:', err.message);
+          }
         }
       }// Usar uploadService para consistência
       dadosAtualizados.imagemUrl = await uploadService.uploadFile(
@@ -108,8 +111,13 @@ const editarProduto = async (req, res) => {
 };
 
 const deletarProduto = async (req, res) => {
-try {
+  try {
     const { id } = req.params;
+    console.log('🗑️ Iniciando exclusão do produto ID:', id);
+
+    if (!id || isNaN(id)) {
+      return res.status(400).json({ error: "ID inválido" });
+    }
 
     // Busca o produto antes de deletar para pegar o nome da imagem
     const produto = await prisma.produto.findUnique({
@@ -118,24 +126,55 @@ try {
 
     if (!produto) {
       return res.status(404).json({ error: 'Produto não encontrado' });
-    }    // Extrai o caminho da imagem do Firebase e remove usando uploadService
+    }
+
+    console.log('📦 Produto encontrado:', produto.nome);
+
+    // Extrai o caminho da imagem do Firebase e remove usando uploadService
     if (produto.imagemUrl) {
       try {
         await uploadService.deleteFile(produto.imagemUrl);
+        console.log('🖼️ Imagem removida do Firebase');
       } catch (err) {
-        console.warn('⚠️ Falha ao remover imagem do Firebase:', err.message);
+        // Só mostra warning se não for erro 404 (arquivo não encontrado)
+        if (!(err.code === 404 || err.code === '404' || err.message?.includes('No such object'))) {
+          console.warn('⚠️ Falha ao remover imagem do Firebase:', err.message);
+        }
+        console.log('🖼️ Imagem não encontrada no Firebase (ignorado)');
       }
+    }    // Remove todos os itens de carrinho que referenciam este produto
+    const itensCarrinhoRemovidos = await prisma.cartItem.deleteMany({
+      where: { produtoId: parseInt(id) }
+    });
+    console.log('🛒 Itens de carrinho removidos:', itensCarrinhoRemovidos.count);
+
+    // Verifica se há pedidos vinculados e remove as relações
+    const pedidosVinculados = await prisma.pedidoProduto.findMany({
+      where: { produtoId: parseInt(id) }
+    });
+
+    if (pedidosVinculados.length > 0) {
+      console.log('⚠️ Produto vinculado a pedidos:', pedidosVinculados.length);
+      console.log('🗑️ Removendo relações produto-pedido...');
+      
+      // Remove todas as relações produto-pedido
+      const relacoesRemovidas = await prisma.pedidoProduto.deleteMany({
+        where: { produtoId: parseInt(id) }
+      });
+      console.log('🗑️ Relações produto-pedido removidas:', relacoesRemovidas.count);
     }
 
+    console.log('✅ Prosseguindo com exclusão do produto...');
+
     // Remove o produto do banco
-    await prisma.produto.delete({
+    const produtoExcluido = await prisma.produto.delete({
       where: { id: parseInt(id) }
     });
 
-    res.status(204).send();
-  } catch (err) {
-    console.error('Erro ao deletar produto:', err);
-    res.status(500).json({ error: 'Erro ao deletar produto' });
+    console.log('✅ Produto excluído do banco:', produtoExcluido.id);
+    res.status(200).json({ message: 'Produto excluído com sucesso' });  } catch (err) {
+    console.error('❌ Erro ao excluir produto:', err);
+    res.status(500).json({ error: err.message });
   }
 };
 
