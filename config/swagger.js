@@ -274,19 +274,11 @@ module.exports = {
           "401": { description: "Token inválido" }
         }
       }
-    },
-    "/auth/profile": {
-      post: {
+    },    "/auth/profile": {
+      get: {
         summary: "Obter perfil do usuário",
         tags: ["Auth"],
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: { "$ref": "#/components/schemas/TokenRequest" }
-            }
-          }
-        },
+        security: [{ bearerAuth: [] }],
         responses: {
           "200": {
             description: "Perfil obtido com sucesso",
@@ -300,20 +292,18 @@ module.exports = {
           "404": { description: "Usuário não encontrado" }
         }
       }
-    },
-    "/auth/update-profile": {
+    },    "/auth/update-profile": {
       put: {
         summary: "Atualizar perfil do usuário",
         tags: ["Auth"],
+        security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
           content: {
             "application/json": {
               schema: {
                 type: "object",
-                required: ["idToken"],
                 properties: {
-                  idToken: { type: "string" },
                   nome: { type: "string" },
                   telefone: { type: "string" },
                   curso: { type: "string" }
@@ -335,11 +325,11 @@ module.exports = {
           "401": { description: "Token inválido" }
         }
       }
-    },
-    "/auth/logout": {
+    },    "/auth/logout": {
       post: {
         summary: "Logout do usuário",
         tags: ["Auth"],
+        security: [{ bearerAuth: [] }],
         responses: {
           "200": { description: "Logout realizado com sucesso" }        }
       }
