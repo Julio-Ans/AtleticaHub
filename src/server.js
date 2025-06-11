@@ -20,6 +20,7 @@ const pedidoRoutes = require('./routes/pedidosRoutes');
 
 // Importar rotas de autenticação
 const authRoutes = require('./routes/authRoutes');
+const verificarToken = require('./middlewares/verificarToken');
 
 const app = express();
 
@@ -27,48 +28,25 @@ connectMongoDB().then(() => {
   console.log('🍃 MongoDB conectado com sucesso!');
 });
 
-// Configuração CORS para permitir acesso da aplicação Next.js
+// Configuração CORS simplificada para produção
+const allowedOrigins = [
+  'http://localhost:3000', 
+  'http://localhost:3001', 
+  process.env.FRONTEND_URL,
+  process.env.VERCEL_URL,
+  'https://aletica-hub-etya.vercel.app'
+].filter(Boolean);
+
+console.log('🌐 CORS - Origens permitidas:', allowedOrigins);
+
+// CORS simplificado - o problema pode estar na complexidade da configuração
 app.use(cors({
-  origin: [
-    'http://localhost:3000', 
-    'http://localhost:3001', 
-    process.env.FRONTEND_URL,
-    process.env.VERCEL_URL,
-    'https://aletica-hub-etya.vercel.app'
-  ].filter(Boolean),
+  origin: allowedOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  exposedHeaders: ['Access-Control-Allow-Origin'],
   optionsSuccessStatus: 200
 }));
-
-// Middleware adicional para tratar preflight requests
-app.use((req, res, next) => {
-  const allowedOrigins = [
-    'http://localhost:3000',
-    'http://localhost:3001',
-    process.env.FRONTEND_URL,
-    process.env.VERCEL_URL,
-    'https://aletica-hub-etya.vercel.app'
-  ].filter(Boolean);
-
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  }
-  
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-  
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
-  
-  next();
-});
 
 // Middlewares
 app.use(express.json());
@@ -110,6 +88,31 @@ app.get('/api/cors-test', (req, res) => {
     },
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Rota específica para testar middlewares em produção
+app.get('/api/middleware-test', (req, res) => {
+  console.log('🧪 [MIDDLEWARE-TEST] Testando middleware chain');
+  console.log('🧪 [MIDDLEWARE-TEST] Headers:', req.headers);
+  
+  res.json({
+    message: 'Middleware test - sem autenticação',
+    headers: req.headers,
+    environment: process.env.NODE_ENV,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Rota para testar middleware de autenticação especificamente
+app.get('/api/auth-middleware-test', verificarToken, (req, res) => {
+  console.log('🧪 [AUTH-MIDDLEWARE-TEST] req.user:', req.user);
+  
+  res.json({
+    message: 'Middleware de autenticação funcionando',
+    user: req.user,
+    environment: process.env.NODE_ENV,
+    timestamp: new Date().toISOString()
   });
 });
 

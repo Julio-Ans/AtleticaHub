@@ -261,20 +261,13 @@ module.exports = {
       post: {
         summary: "Verificar token de autenticação",
         tags: ["Auth"],
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: { "$ref": "#/components/schemas/TokenRequest" }
-            }
-          }
-        },
+        security: [{ bearerAuth: [] }],
         responses: {
           "200": { description: "Token válido" },
           "401": { description: "Token inválido" }
         }
       }
-    },    "/auth/profile": {
+    },"/auth/profile": {
       get: {
         summary: "Obter perfil do usuário",
         tags: ["Auth"],

@@ -106,9 +106,40 @@ class AuthController {
    */
   static async login(req, res) {
     try {
-      // Token já verificado pelo middleware verificarToken
-      const uid = req.user.uid;
-      const email = req.user.email;
+      console.log('🔍 LOGIN: Iniciando processo de login');
+      
+      // Pegar token do header diretamente
+      const authHeader = req.headers.authorization;
+      
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        console.log('❌ LOGIN: Token ausente ou formato inválido');
+        return res.status(401).json({
+          success: false,
+          error: 'Token ausente ou inválido',
+          code: 'MISSING_TOKEN'
+        });
+      }
+
+      const token = authHeader.split(' ')[1];
+      
+      if (!token || token.length < 10) {
+        console.log('❌ LOGIN: Token muito curto ou vazio');
+        return res.status(401).json({
+          success: false,
+          error: 'Token malformado',
+          code: 'MALFORMED_TOKEN'
+        });
+      }
+
+      // Verificar token no Firebase
+      console.log('🔒 LOGIN: Verificando token no Firebase...');
+      const decodedToken = await admin.auth().verifyIdToken(token);
+      console.log('✅ LOGIN: Token válido no Firebase para UID:', decodedToken.uid);
+
+      const uid = decodedToken.uid;
+      const email = decodedToken.email;
+      
+      console.log('✅ LOGIN: Dados extraídos - UID:', uid, 'Email:', email);
       
       // Buscar usuário
       let usuario = await userRepository.findById(uid);
@@ -116,6 +147,7 @@ class AuthController {
       // Se o usuário não existir no banco, criar automaticamente
       if (!usuario) {
         try {
+          console.log('🔨 LOGIN: Usuário não existe no banco, criando...');
           // Buscar dados do usuário no Firebase
           const firebaseUser = await admin.auth().getUser(uid);
           
@@ -129,9 +161,9 @@ class AuthController {
             role: 'user' // Padrão como usuário comum
           });
           
-          console.log(`✅ Usuário criado automaticamente: ${usuario.nome} (${usuario.id})`);
+          console.log(`✅ LOGIN: Usuário criado automaticamente: ${usuario.nome} (${usuario.id})`);
         } catch (createErr) {
-          console.error('❌ Erro ao criar usuário no banco:', createErr);
+          console.error('❌ LOGIN: Erro ao criar usuário no banco:', createErr);
           return res.status(500).json({
             success: false,
             error: 'Erro ao criar usuário no sistema.',
@@ -140,6 +172,7 @@ class AuthController {
         }
       }
 
+      console.log('✅ LOGIN: Login bem-sucedido para:', usuario.nome);
       res.status(200).json({
         success: true,
         message: 'Login realizado com sucesso',
@@ -147,28 +180,48 @@ class AuthController {
         role: usuario.role
       });
     } catch (error) {
-      console.error('❌ Erro no login:', error);
-      
-      // Se req.user é undefined, significa que o middleware não funcionou
-      if (!req.user) {
-        return res.status(401).json({
-          success: false,
-          error: 'Token de autenticação inválido ou ausente',
-          code: 'MISSING_OR_INVALID_TOKEN'
-        });
-      }
-      
+      console.error('❌ LOGIN: Erro no processo:', error);
       return AuthController.handleError(res, error);
     }
-  }
-  /**
+  }  /**
    * Verificar token
    */
   static async verify(req, res) {
     try {
-      // Token já verificado pelo middleware verificarToken
-      const uid = req.user.uid;
-      const email = req.user.email;
+      console.log('🔍 VERIFY: Iniciando verificação de token');
+      
+      // Pegar token do header diretamente
+      const authHeader = req.headers.authorization;
+      
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        console.log('❌ VERIFY: Token ausente ou formato inválido');
+        return res.status(401).json({
+          success: false,
+          error: 'Token ausente ou inválido',
+          code: 'MISSING_TOKEN'
+        });
+      }
+
+      const token = authHeader.split(' ')[1];
+      
+      if (!token || token.length < 10) {
+        console.log('❌ VERIFY: Token muito curto ou vazio');
+        return res.status(401).json({
+          success: false,
+          error: 'Token malformado',
+          code: 'MALFORMED_TOKEN'
+        });
+      }
+
+      // Verificar token no Firebase
+      console.log('🔒 VERIFY: Verificando token no Firebase...');
+      const decodedToken = await admin.auth().verifyIdToken(token);
+      console.log('✅ VERIFY: Token válido no Firebase para UID:', decodedToken.uid);
+
+      const uid = decodedToken.uid;
+      const email = decodedToken.email;
+      
+      console.log('✅ VERIFY: Token verificado com sucesso - UID:', uid, 'Email:', email);
       
       res.status(200).json({
         success: true,
@@ -178,7 +231,7 @@ class AuthController {
       });
 
     } catch (error) {
-      console.error('Erro na verificação:', error);
+      console.error('❌ VERIFY: Erro na verificação:', error);
       
       res.status(401).json({
         success: false,
