@@ -69,8 +69,24 @@ module.exports = {  async listarEsportes() {
     } catch (error) {
       console.error('Erro ao atualizar esporte:', error);
       throw error;
+    }  },
+
+  async buscarEsportePorId(id) {
+    try {
+      // Se for o esporte "Geral", retornar objeto virtual
+      if (String(id) === "0") {
+        return { id: "0", nome: "Geral" };
+      }
+      
+      // Buscar no repositório
+      const esporte = await esporteRepository.findById(String(id));
+      return esporte;
+    } catch (error) {
+      console.error('Erro ao buscar esporte por ID:', error);
+      throw error;
     }
   },
+
   async excluirEsporte(id) {
     try {
       // Validações

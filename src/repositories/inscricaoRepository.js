@@ -37,12 +37,14 @@ class InscricaoRepository {
       }
     });
   }
-
   async findByUser(usuarioId) {
-    return await prisma.inscricao.findMany({
+    console.log('🔍 InscricaoRepository.findByUser - Buscando para usuário:', usuarioId);
+    const result = await prisma.inscricao.findMany({
       where: { usuarioId },
       orderBy: { criadaEm: 'desc' }
     });
+    console.log('🔍 InscricaoRepository.findByUser - Resultado:', result);
+    return result;
   }
   async findBySport(esporteId) {
     return await prisma.inscricao.findMany({

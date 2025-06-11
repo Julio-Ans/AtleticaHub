@@ -72,17 +72,43 @@ module.exports = {
       res.status(500).json({ error: err.message });
     }
   },
-
   // Listar minhas inscrições
   async listarMinhasInscricoes(req, res) {
     try {
       const usuarioId = req.user.uid;
+      console.log('📝 DEBUG listarMinhasInscricoes - Usuario ID:', usuarioId);
+      
       const inscricoes = await inscricaoService.listarPorUsuario(usuarioId);
+      console.log('📝 DEBUG listarMinhasInscricoes - Inscricoes retornadas:', inscricoes);
+      
       res.json(inscricoes);
     } catch (err) {
       console.error('Erro ao listar inscrições do usuário:', err);
       res.status(500).json({ error: err.message });
     }
-  }
+  },
   
-};
+  // 🐛 DEBUG: Endpoint temporário para debug
+  async debugInscricoes(req, res) {
+    try {
+      const usuarioId = req.user.uid;
+      console.log('🐛 DEBUG ENDPOINT - Usuario ID:', usuarioId);
+      console.log('🐛 DEBUG ENDPOINT - Usuario completo:', req.user);
+      
+      const inscricoes = await inscricaoService.listarPorUsuario(usuarioId);
+      
+      res.json({
+        usuario: {
+          uid: req.user.uid,
+          nome: req.user.nome,
+          role: req.user.role
+        },
+        inscricoes: inscricoes,
+        totalInscricoes: inscricoes.length
+      });
+    } catch (err) {
+      console.error('🐛 Erro no debug:', err);
+      res.status(500).json({ error: err.message });
+    }
+  }
+  };

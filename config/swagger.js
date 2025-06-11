@@ -16,7 +16,8 @@ module.exports = {
         bearerFormat: "JWT"
       }
     },
-    schemas: {      Produto: {
+    schemas: {
+      Produto: {
         type: "object",
         properties: {
           id: { type: "integer" },
@@ -28,19 +29,29 @@ module.exports = {
           createdAt: { type: "string", format: "date-time" },
           updatedAt: { type: "string", format: "date-time" }
         },
-        required: ["nome","preco","estoque"]
+        required: ["nome", "preco", "estoque"]
       },
       CartItem: {
         type: "object",
         properties: {
           id: { type: "integer" },
-          studentEmail: { type: "string" },
+          usuarioId: { type: "string" },
           produtoId: { type: "integer" },
           quantidade: { type: "integer" },
-          createdAt: { type: "string", format: "date-time" }
+          createdAt: { type: "string", format: "date-time" },
+          produto: {
+            type: "object",
+            properties: {
+              id: { type: "integer" },
+              nome: { type: "string" },
+              preco: { type: "number", format: "float" },
+              imagemUrl: { type: "string" }
+            }
+          }
         },
-        required: ["studentEmail","produtoId","quantidade"]
-      },      Pedido: {
+        required: ["usuarioId", "produtoId", "quantidade"]
+      },
+      Pedido: {
         type: "object",
         properties: {
           id: { type: "integer" },
@@ -71,8 +82,9 @@ module.exports = {
             }
           },
           total: { type: "number", format: "float" },
-          status: { type: "string", enum: ["pendente", "processando", "entregue", "cancelado"] },
-          createdAt: { type: "string", format: "date-time" }
+          status: { type: "string", enum: ["pendente", "processando", "enviado", "entregue", "cancelado"] },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" }
         }
       },
       Usuario: {
@@ -80,6 +92,7 @@ module.exports = {
         properties: {
           id: { type: "string" },
           nome: { type: "string" },
+          email: { type: "string" },
           dataNascimento: { type: "string", format: "date-time" },
           telefone: { type: "string" },
           curso: { type: "string" },
@@ -87,7 +100,8 @@ module.exports = {
           createdAt: { type: "string", format: "date-time" }
         },
         required: ["nome", "dataNascimento", "telefone", "curso"]
-      },      Esporte: {
+      },
+      Esporte: {
         type: "object",
         properties: {
           id: { type: "string" },
@@ -128,7 +142,8 @@ module.exports = {
           idToken: { type: "string" }
         },
         required: ["idToken"]
-      },      RegisterRequest: {
+      },
+      RegisterRequest: {
         type: "object",
         required: ["email", "password", "nome", "telefone", "curso", "dataNascimento"],
         properties: {
@@ -140,7 +155,8 @@ module.exports = {
           dataNascimento: { type: "string", format: "date" },
           codigo: { type: "string", description: "Código de convite opcional para admin" }
         }
-      },      TokenRequest: {
+      },
+      TokenRequest: {
         type: "object",
         required: ["idToken"],
         properties: {
@@ -174,8 +190,10 @@ module.exports = {
         properties: {
           error: { type: "string" }
         }
-      },      Evento: {
-        type: "object",        properties: {
+      },
+      Evento: {
+        type: "object",
+        properties: {
           _id: { type: "string" },
           titulo: { type: "string" },
           descricao: { type: "string" },
@@ -201,11 +219,31 @@ module.exports = {
           }
         },
         required: ["titulo", "tipo", "data", "local", "criadorId", "esporteId"]
+      },
+      PagamentoRequest: {
+        type: "object",
+        properties: {
+          pedidoId: { type: "integer" },
+          metodoPagamento: { type: "string", enum: ["pix", "cartao", "boleto"] },
+          valor: { type: "number", format: "float" }
+        },
+        required: ["pedidoId", "metodoPagamento", "valor"]
+      },
+      PagamentoResponse: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          status: { type: "string" },
+          qrCode: { type: "string", description: "QR Code para PIX" },
+          qrCodeBase64: { type: "string", description: "QR Code em Base64" },
+          pixCopiaECola: { type: "string", description: "Código PIX copia e cola" },
+          linkPagamento: { type: "string", description: "Link para página de pagamento" }
+        }
       }
     }
   },
   paths: {
-    // Autenticação
+    // =================== AUTENTICAÇÃO ===================
     "/auth/register": {
       post: {
         summary: "Registrar novo usuário",
@@ -231,7 +269,8 @@ module.exports = {
           "403": { description: "Email não autorizado" }
         }
       }
-    },    "/auth/login": {
+    },
+    "/auth/login": {
       post: {
         summary: "Login do usuário",
         tags: ["Auth"],
@@ -257,7 +296,8 @@ module.exports = {
           "404": { description: "Usuário não encontrado" }
         }
       }
-    },    "/auth/verify": {
+    },
+    "/auth/verify": {
       post: {
         summary: "Verificar token de autenticação",
         tags: ["Auth"],
@@ -267,7 +307,8 @@ module.exports = {
           "401": { description: "Token inválido" }
         }
       }
-    },"/auth/profile": {
+    },
+    "/auth/profile": {
       get: {
         summary: "Obter perfil do usuário",
         tags: ["Auth"],
@@ -285,7 +326,8 @@ module.exports = {
           "404": { description: "Usuário não encontrado" }
         }
       }
-    },    "/auth/update-profile": {
+    },
+    "/auth/update-profile": {
       put: {
         summary: "Atualizar perfil do usuário",
         tags: ["Auth"],
@@ -318,13 +360,15 @@ module.exports = {
           "401": { description: "Token inválido" }
         }
       }
-    },    "/auth/logout": {
+    },
+    "/auth/logout": {
       post: {
         summary: "Logout do usuário",
         tags: ["Auth"],
         security: [{ bearerAuth: [] }],
         responses: {
-          "200": { description: "Logout realizado com sucesso" }        }
+          "200": { description: "Logout realizado com sucesso" }
+        }
       }
     },
     "/auth/verify-user": {
@@ -397,9 +441,10 @@ module.exports = {
         }
       }
     },
-    
-    // Esportes
-    "/api/esportes": {      get: {
+
+    // =================== ESPORTES ===================
+    "/api/esportes": {
+      get: {
         summary: "Listar todos os esportes",
         tags: ["Esportes"],
         security: [{ bearerAuth: [] }],
@@ -417,7 +462,8 @@ module.exports = {
           },
           "401": { description: "Não autorizado" }
         }
-      },      post: {
+      },
+      post: {
         summary: "Criar novo esporte",
         tags: ["Esportes"],
         security: [{ bearerAuth: [] }],
@@ -455,66 +501,8 @@ module.exports = {
         }
       }
     },
-    
-    // Produtos
-    "/api/produtos": {      post: {
-        summary: "Criar produto",
-        tags: ["Loja"],
-        security: [{ bearerAuth: [] }],
-        requestBody: {
-          required: true,
-          content: {
-            "multipart/form-data": {
-              schema: {
-                type: "object",
-                properties: {
-                  nome: { type: "string" },
-                  descricao: { type: "string" },
-                  preco: { type: "number", format: "float" },
-                  estoque: { type: "integer" },
-                  imagem: { 
-                    type: "string", 
-                    format: "binary",
-                    description: "Arquivo de imagem do produto" 
-                  }
-                },
-                required: ["nome", "descricao", "preco", "estoque", "imagem"]
-              }
-            }
-          }
-        },
-        responses: {
-          "201": {
-            description: "Produto criado",
-            content: {
-              "application/json": {
-                schema: { $ref: "#/components/schemas/Produto" }
-              }
-            }
-          },
-          "400": { description: "Requisição inválida" },
-          "401": { description: "Não autorizado" },
-          "403": { description: "Acesso negado - apenas administradores" }
-        }
-      },      get: {
-        summary: "Listar produtos",
-        tags: ["Loja"],
-        responses: {
-          "200": {
-            description: "Lista de produtos",
-            content: {
-              "application/json": {
-                schema: {
-                  type: "array",
-                  items: { $ref: "#/components/schemas/Produto" }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/esportes/{id}": {      put: {
+    "/api/esportes/{id}": {
+      put: {
         summary: "Atualizar esporte",
         tags: ["Esportes"],
         security: [{ bearerAuth: [] }],
@@ -526,7 +514,8 @@ module.exports = {
             schema: { type: "string" },
             description: "ID do esporte"
           }
-        ],        requestBody: {
+        ],
+        requestBody: {
           required: true,
           content: {
             "multipart/form-data": {
@@ -558,7 +547,8 @@ module.exports = {
           "403": { description: "Acesso negado - apenas administradores" },
           "404": { description: "Esporte não encontrado" }
         }
-      },      delete: {
+      },
+      delete: {
         summary: "Excluir esporte",
         tags: ["Esportes"],
         security: [{ bearerAuth: [] }],
@@ -591,9 +581,10 @@ module.exports = {
         }
       }
     },
-    
-    // Inscrições
-    "/api/inscricoes/minhas": {      get: {
+
+    // =================== INSCRIÇÕES ===================
+    "/api/inscricoes/minhas": {
+      get: {
         summary: "Listar minhas inscrições",
         tags: ["Esportes"],
         security: [{ bearerAuth: [] }],
@@ -613,7 +604,8 @@ module.exports = {
         }
       }
     },
-    "/api/inscricoes/{esporteId}": {      post: {
+    "/api/inscricoes/{esporteId}": {
+      post: {
         summary: "Criar inscrição em um esporte",
         tags: ["Esportes"],
         security: [{ bearerAuth: [] }],
@@ -641,7 +633,8 @@ module.exports = {
         }
       }
     },
-    "/api/inscricoes/pendentes/{esporteId}": {      get: {
+    "/api/inscricoes/pendentes/{esporteId}": {
+      get: {
         summary: "Listar inscrições pendentes para um esporte (admin)",
         tags: ["Esportes"],
         security: [{ bearerAuth: [] }],
@@ -672,7 +665,8 @@ module.exports = {
         }
       }
     },
-    "/api/inscricoes/{id}": {      put: {
+    "/api/inscricoes/{id}": {
+      put: {
         summary: "Atualizar status de inscrição (admin)",
         tags: ["Esportes"],
         security: [{ bearerAuth: [] }],
@@ -718,9 +712,10 @@ module.exports = {
         }
       }
     },
-    
-    // Mensagens
-    "/api/mensagens/{esporteId}": {      get: {
+
+    // =================== MENSAGENS ===================
+    "/api/mensagens/{esporteId}": {
+      get: {
         summary: "Listar mensagens de um esporte",
         tags: ["Mensagens"],
         security: [{ bearerAuth: [] }],
@@ -749,7 +744,8 @@ module.exports = {
           "403": { description: "Acesso negado - usuário não inscrito neste esporte" },
           "404": { description: "Esporte não encontrado" }
         }
-      },      post: {
+      },
+      post: {
         summary: "Criar nova mensagem em um esporte",
         tags: ["Mensagens"],
         security: [{ bearerAuth: [] }],
@@ -793,68 +789,18 @@ module.exports = {
         }
       }
     },
-    
-    // Cart e e-commerce
-    "/api/cart": {      post: {
-        summary: "Adicionar item ao carrinho",
-        tags: ["Loja"],
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: { $ref: "#/components/schemas/CartItem" }
-            }
-          }
-        },
-        responses: {
-          "201": {
-            description: "Item adicionado",
-            content: {
-              "application/json": {
-                schema: { $ref: "#/components/schemas/CartItem" }
-              }
-            }
-          },
-          "400": { description: "Dados inválidos" }
-        }
-      },      get: {
-        summary: "Listar itens do carrinho",
-        tags: ["Loja"],
-        parameters: [
-          {
-            name: "studentEmail",
-            in: "query",
-            required: true,
-            schema: { type: "string" },
-            description: "Email do estudante"
-          }
-        ],
-        responses: {
-          "200": {
-            description: "Itens encontrados",
-            content: {
-              "application/json": {
-                schema: {
-                  type: "array",
-                  items: { $ref: "#/components/schemas/CartItem" }
-                }
-              }
-            }
-          },
-          "400": { description: "Parâmetro ausente" }
-        }
-      }
-    },
-    "/api/cart/{id}": {      put: {
-        summary: "Atualizar item no carrinho",
-        tags: ["Loja"],
+    "/api/mensagens/{id}": {
+      put: {
+        summary: "Editar mensagem",
+        tags: ["Mensagens"],
+        security: [{ bearerAuth: [] }],
         parameters: [
           {
             name: "id",
             in: "path",
             required: true,
-            schema: { type: "integer" },
-            description: "ID do item no carrinho"
+            schema: { type: "string" },
+            description: "ID da mensagem"
           }
         ],
         requestBody: {
@@ -864,40 +810,43 @@ module.exports = {
               schema: {
                 type: "object",
                 properties: {
-                  quantidade: { type: "integer", minimum: 1 }
+                  conteudo: { type: "string" }
                 },
-                required: ["quantidade"]
+                required: ["conteudo"]
               }
             }
           }
         },
         responses: {
           "200": {
-            description: "Item atualizado",
+            description: "Mensagem editada",
             content: {
               "application/json": {
-                schema: { $ref: "#/components/schemas/CartItem" }
+                schema: { $ref: "#/components/schemas/Mensagem" }
               }
             }
           },
-          "400": { description: "Dados inválidos" },
-          "404": { description: "Item não encontrado" }
+          "401": { description: "Não autorizado" },
+          "403": { description: "Permissão negada - somente o autor pode editar" },
+          "404": { description: "Mensagem não encontrada" }
         }
-      },      delete: {
-        summary: "Remover item do carrinho",
-        tags: ["Loja"],
+      },
+      delete: {
+        summary: "Excluir mensagem",
+        tags: ["Mensagens"],
+        security: [{ bearerAuth: [] }],
         parameters: [
           {
             name: "id",
             in: "path",
             required: true,
-            schema: { type: "integer" },
-            description: "ID do item no carrinho"
+            schema: { type: "string" },
+            description: "ID da mensagem"
           }
         ],
         responses: {
           "200": {
-            description: "Item removido",
+            description: "Mensagem excluída",
             content: {
               "application/json": {
                 schema: {
@@ -909,13 +858,26 @@ module.exports = {
               }
             }
           },
-          "404": { description: "Item não encontrado" }
+          "401": { description: "Não autorizado" },
+          "403": { description: "Permissão negada - somente o autor ou admin podem excluir" },
+          "404": { description: "Mensagem não encontrada" }
         }
       }
     },
-    "/api/checkout": {      post: {
-        summary: "Finalizar compra",
-        tags: ["Loja"],
+    "/api/mensagens/{id}/fixar": {
+      patch: {
+        summary: "Fixar/desfixar mensagem (admin)",
+        tags: ["Mensagens"],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "ID da mensagem"
+          }
+        ],
         requestBody: {
           required: true,
           content: {
@@ -923,26 +885,91 @@ module.exports = {
               schema: {
                 type: "object",
                 properties: {
-                  studentEmail: { type: "string" }
+                  fixada: { type: "boolean" }
                 },
-                required: ["studentEmail"]
+                required: ["fixada"]
+              }
+            }
+          }
+        },
+        responses: {
+          "200": {
+            description: "Status de fixação atualizado",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/Mensagem" }
+              }
+            }
+          },
+          "401": { description: "Não autorizado" },
+          "403": { description: "Permissão negada - somente admin pode fixar mensagens" },
+          "404": { description: "Mensagem não encontrada" }
+        }
+      }
+    },
+
+    // =================== PRODUTOS ===================
+    "/api/produtos": {
+      get: {
+        summary: "Listar produtos",
+        tags: ["Loja"],
+        responses: {
+          "200": {
+            description: "Lista de produtos",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "array",
+                  items: { $ref: "#/components/schemas/Produto" }
+                }
+              }
+            }
+          }
+        }
+      },
+      post: {
+        summary: "Criar produto",
+        tags: ["Loja"],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "multipart/form-data": {
+              schema: {
+                type: "object",
+                properties: {
+                  nome: { type: "string" },
+                  descricao: { type: "string" },
+                  preco: { type: "number", format: "float" },
+                  estoque: { type: "integer" },
+                  imagem: { 
+                    type: "string", 
+                    format: "binary",
+                    description: "Arquivo de imagem do produto" 
+                  }
+                },
+                required: ["nome", "descricao", "preco", "estoque", "imagem"]
               }
             }
           }
         },
         responses: {
           "201": {
-            description: "Pedido criado",
+            description: "Produto criado",
             content: {
               "application/json": {
-                schema: { $ref: "#/components/schemas/Pedido" }
+                schema: { $ref: "#/components/schemas/Produto" }
               }
             }
           },
-          "400": { description: "Dados inválidos ou carrinho vazio" }
+          "400": { description: "Requisição inválida" },
+          "401": { description: "Não autorizado" },
+          "403": { description: "Acesso negado - apenas administradores" }
         }
-      }    },
-    "/api/produtos/{id}": {      get: {
+      }
+    },
+    "/api/produtos/{id}": {
+      get: {
         summary: "Detalhar produto por ID",
         tags: ["Loja"],
         parameters: [
@@ -965,7 +992,8 @@ module.exports = {
           },
           "404": { description: "Produto não encontrado" }
         }
-      },      put: {
+      },
+      put: {
         summary: "Atualizar produto",
         tags: ["Loja"],
         security: [{ bearerAuth: [] }],
@@ -1013,7 +1041,8 @@ module.exports = {
           "403": { description: "Acesso negado - apenas administradores" },
           "404": { description: "Produto não encontrado" }
         }
-      },      delete: {
+      },
+      delete: {
         summary: "Excluir produto",
         tags: ["Loja"],
         security: [{ bearerAuth: [] }],
@@ -1025,7 +1054,8 @@ module.exports = {
             schema: { type: "integer" },
             description: "ID do produto"
           }
-        ],        responses: {
+        ],
+        responses: {
           "200": {
             description: "Produto excluído",
             content: {
@@ -1045,17 +1075,94 @@ module.exports = {
         }
       }
     },
-    "/api/mensagens/{id}": {      put: {
-        summary: "Editar mensagem",
-        tags: ["Mensagens"],
+
+    // =================== CARRINHO ===================
+    "/api/carrinho": {
+      get: {
+        summary: "Listar itens do carrinho",
+        tags: ["Loja"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "200": {
+            description: "Itens encontrados",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "array",
+                  items: { $ref: "#/components/schemas/CartItem" }
+                }
+              }
+            }
+          },
+          "401": { description: "Não autorizado" }
+        }
+      },
+      post: {
+        summary: "Adicionar item ao carrinho",
+        tags: ["Loja"],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  produtoId: { type: "integer" },
+                  quantidade: { type: "integer", minimum: 1 }
+                },
+                required: ["produtoId", "quantidade"]
+              }
+            }
+          }
+        },
+        responses: {
+          "201": {
+            description: "Item adicionado",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/CartItem" }
+              }
+            }
+          },
+          "400": { description: "Dados inválidos" },
+          "401": { description: "Não autorizado" }
+        }
+      },
+      delete: {
+        summary: "Limpar carrinho",
+        tags: ["Loja"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "200": {
+            description: "Carrinho limpo",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    message: { type: "string" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { description: "Não autorizado" }
+        }
+      }
+    },
+    "/api/carrinho/{id}": {
+      put: {
+        summary: "Atualizar item no carrinho",
+        tags: ["Loja"],
         security: [{ bearerAuth: [] }],
         parameters: [
           {
             name: "id",
             in: "path",
             required: true,
-            schema: { type: "string" },
-            description: "ID da mensagem"
+            schema: { type: "integer" },
+            description: "ID do item no carrinho"
           }
         ],
         requestBody: {
@@ -1065,42 +1172,43 @@ module.exports = {
               schema: {
                 type: "object",
                 properties: {
-                  conteudo: { type: "string" }
+                  quantidade: { type: "integer", minimum: 1 }
                 },
-                required: ["conteudo"]
+                required: ["quantidade"]
               }
             }
           }
         },
         responses: {
           "200": {
-            description: "Mensagem editada",
+            description: "Item atualizado",
             content: {
               "application/json": {
-                schema: { $ref: "#/components/schemas/Mensagem" }
+                schema: { $ref: "#/components/schemas/CartItem" }
               }
             }
           },
+          "400": { description: "Dados inválidos" },
           "401": { description: "Não autorizado" },
-          "403": { description: "Permissão negada - somente o autor pode editar" },
-          "404": { description: "Mensagem não encontrada" }
+          "404": { description: "Item não encontrado" }
         }
-      },      delete: {
-        summary: "Excluir mensagem",
-        tags: ["Mensagens"],
+      },
+      delete: {
+        summary: "Remover item do carrinho",
+        tags: ["Loja"],
         security: [{ bearerAuth: [] }],
         parameters: [
           {
             name: "id",
             in: "path",
             required: true,
-            schema: { type: "string" },
-            description: "ID da mensagem"
+            schema: { type: "integer" },
+            description: "ID do item no carrinho"
           }
         ],
         responses: {
           "200": {
-            description: "Mensagem excluída",
+            description: "Item removido",
             content: {
               "application/json": {
                 schema: {
@@ -1113,65 +1221,42 @@ module.exports = {
             }
           },
           "401": { description: "Não autorizado" },
-          "403": { description: "Permissão negada - somente o autor ou admin podem excluir" },
-          "404": { description: "Mensagem não encontrada" }
+          "404": { description: "Item não encontrado" }
         }
       }
     },
-    "/api/mensagens/{id}/fixar": {      patch: {
-        summary: "Fixar/desfixar mensagem (admin)",
-        tags: ["Mensagens"],
+    "/api/carrinho/finalizar": {
+      post: {
+        summary: "Finalizar compra",
+        tags: ["Loja"],
         security: [{ bearerAuth: [] }],
-        parameters: [
-          {
-            name: "id",
-            in: "path",
-            required: true,
-            schema: { type: "string" },
-            description: "ID da mensagem"
-          }
-        ],
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  fixada: { type: "boolean" }
-                },
-                required: ["fixada"]
-              }
-            }
-          }
-        },
         responses: {
-          "200": {
-            description: "Status de fixação atualizado",
+          "201": {
+            description: "Pedido criado",
             content: {
               "application/json": {
-                schema: { $ref: "#/components/schemas/Mensagem" }
+                schema: {
+                  type: "object",
+                  properties: {
+                    pedido: { $ref: "#/components/schemas/Pedido" },
+                    message: { type: "string" }
+                  }
+                }
               }
             }
           },
-          "401": { description: "Não autorizado" },
-          "403": { description: "Permissão negada - somente admin pode fixar mensagens" },
-          "404": { description: "Mensagem não encontrada" }
+          "400": { description: "Dados inválidos ou carrinho vazio" },
+          "401": { description: "Não autorizado" }
         }
       }
     },
-    "/api/pedidos": {      get: {
-        summary: "Listar pedidos",
+
+    // =================== PEDIDOS ===================
+    "/api/pedidos/usuario": {
+      get: {
+        summary: "Listar meus pedidos",
         tags: ["Loja"],
-        parameters: [
-          {
-            name: "studentEmail",
-            in: "query",
-            required: true,
-            schema: { type: "string" },
-            description: "Email do estudante"
-          }
-        ],
+        security: [{ bearerAuth: [] }],
         responses: {
           "200": {
             description: "Pedidos encontrados",
@@ -1184,41 +1269,12 @@ module.exports = {
               }
             }
           },
-          "400": { description: "Parâmetro ausente" }
-        }
-      }
-    },    "/api/pedidos/{id}/payment": {      post: {
-        summary: "Processar pagamento",
-        tags: ["Loja"],
-        parameters: [
-          {
-            name: "id",
-            in: "path",
-            required: true,
-            schema: { type: "integer" },
-            description: "ID do pedido"
-          }
-        ],
-        responses: {
-          "200": {
-            description: "Pagamento confirmado",
-            content: {
-              "application/json": {
-                schema: {
-                  type: "object",
-                  properties: {
-                    message: { type: "string" },
-                    pedido: { $ref: "#/components/schemas/Pedido" }
-                  }
-                }
-              }
-            }
-          },
-          "404": { description: "Pedido não encontrado" }
+          "401": { description: "Não autorizado" }
         }
       }
     },
-    "/api/pedidos/{id}": {      get: {
+    "/api/pedidos/{id}": {
+      get: {
         summary: "Buscar pedido por ID",
         tags: ["Loja"],
         security: [{ bearerAuth: [] }],
@@ -1245,12 +1301,53 @@ module.exports = {
               }
             }
           },
+          "401": { description: "Não autorizado" },
           "403": { description: "Acesso negado" },
           "404": { description: "Pedido não encontrado" }
         }
       }
     },
-    "/api/pedidos/admin/recentes": {      get: {
+    "/api/pedidos/{id}/pagamento": {
+      post: {
+        summary: "Processar pagamento do pedido",
+        tags: ["Loja"],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "integer" },
+            description: "ID do pedido"
+          }
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/PagamentoRequest" }
+            }
+          }
+        },
+        responses: {
+          "200": {
+            description: "Pagamento processado",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/PagamentoResponse" }
+              }
+            }
+          },
+          "400": { description: "Dados inválidos" },
+          "401": { description: "Não autorizado" },
+          "404": { description: "Pedido não encontrado" }
+        }
+      }
+    },
+
+    // =================== PEDIDOS ADMIN ===================
+    "/api/pedidos/admin/recentes": {
+      get: {
         summary: "Listar pedidos recentes (Admin)",
         tags: ["Loja"],
         security: [{ bearerAuth: [] }],
@@ -1275,7 +1372,8 @@ module.exports = {
         }
       }
     },
-    "/api/pedidos/admin/estatisticas": {      get: {
+    "/api/pedidos/admin/estatisticas": {
+      get: {
         summary: "Obter estatísticas da loja (Admin)",
         tags: ["Loja"],
         security: [{ bearerAuth: [] }],
@@ -1298,7 +1396,8 @@ module.exports = {
         }
       }
     },
-    "/api/pedidos/admin/relatorio-vendas": {      get: {
+    "/api/pedidos/admin/relatorio-vendas": {
+      get: {
         summary: "Relatório de vendas por produto (Admin)",
         tags: ["Loja"],
         security: [{ bearerAuth: [] }],
@@ -1332,7 +1431,8 @@ module.exports = {
         }
       }
     },
-    "/api/pedidos/admin/{id}/status": {      patch: {
+    "/api/pedidos/admin/{id}/status": {
+      patch: {
         summary: "Atualizar status do pedido (Admin)",
         tags: ["Loja"],
         security: [{ bearerAuth: [] }],
@@ -1354,7 +1454,7 @@ module.exports = {
                 properties: {
                   status: { 
                     type: "string", 
-                    enum: ["pendente", "processando", "entregue", "cancelado"],
+                    enum: ["pendente", "processando", "enviado", "entregue", "cancelado"],
                     description: "Novo status do pedido"
                   }
                 },
@@ -1378,7 +1478,8 @@ module.exports = {
         }
       }
     },
-    "/api/pedidos/admin/{id}": {      delete: {
+    "/api/pedidos/admin/{id}": {
+      delete: {
         summary: "Excluir pedido (Admin)",
         tags: ["Loja"],
         security: [{ bearerAuth: [] }],
@@ -1410,8 +1511,10 @@ module.exports = {
         }
       }
     },
-    // Eventos
-    "/api/eventos": {      get: {
+
+    // =================== EVENTOS ===================
+    "/api/eventos": {
+      get: {
         summary: "Listar todos os eventos",
         tags: ["Eventos"],
         responses: {
@@ -1424,7 +1527,8 @@ module.exports = {
             }
           }
         }
-      },      post: {
+      },
+      post: {
         summary: "Criar evento (admin)",
         tags: ["Eventos"],
         security: [{ bearerAuth: [] }],
@@ -1461,11 +1565,14 @@ module.exports = {
               }
             }
           },
-          "400": { description: "Erro ao criar evento" }
+          "400": { description: "Erro ao criar evento" },
+          "401": { description: "Não autorizado" },
+          "403": { description: "Acesso negado - apenas administradores" }
         }
       }
     },
-    "/api/eventos/permitidos": {      get: {
+    "/api/eventos/permitidos": {
+      get: {
         summary: "Listar eventos permitidos para o usuário",
         tags: ["Eventos"],
         security: [{ bearerAuth: [] }],
@@ -1487,7 +1594,8 @@ module.exports = {
         }
       }
     },
-    "/api/eventos/{id}": {      get: {
+    "/api/eventos/{id}": {
+      get: {
         summary: "Buscar evento por ID",
         tags: ["Eventos"],
         parameters: [
@@ -1504,7 +1612,8 @@ module.exports = {
           },
           "404": { description: "Evento não encontrado" }
         }
-      },      put: {
+      },
+      put: {
         summary: "Editar evento (admin)",
         tags: ["Eventos"],
         security: [{ bearerAuth: [] }],
@@ -1516,7 +1625,8 @@ module.exports = {
           content: {
             "application/json": {
               schema: {
-                type: "object",                properties: {
+                type: "object",
+                properties: {
                   titulo: { type: "string" },
                   descricao: { type: "string" },
                   tipo: { type: "string" },
@@ -1529,11 +1639,21 @@ module.exports = {
           }
         },
         responses: {
-          "200": { description: "Evento atualizado", content: { "application/json": { schema: { $ref: "#/components/schemas/Evento" } } } },
+          "200": { 
+            description: "Evento atualizado", 
+            content: { 
+              "application/json": { 
+                schema: { $ref: "#/components/schemas/Evento" } 
+              } 
+            } 
+          },
           "400": { description: "Erro ao editar evento" },
+          "401": { description: "Não autorizado" },
+          "403": { description: "Acesso negado - apenas administradores" },
           "404": { description: "Evento não encontrado" }
         }
-      },      delete: {
+      },
+      delete: {
         summary: "Excluir evento (admin)",
         tags: ["Eventos"],
         security: [{ bearerAuth: [] }],
@@ -1541,12 +1661,27 @@ module.exports = {
           { name: "id", in: "path", required: true, schema: { type: "string" } }
         ],
         responses: {
-          "200": { description: "Evento excluído", content: { "application/json": { schema: { type: "object", properties: { message: { type: "string" } } } } } },
+          "200": { 
+            description: "Evento excluído", 
+            content: { 
+              "application/json": { 
+                schema: { 
+                  type: "object", 
+                  properties: { 
+                    message: { type: "string" } 
+                  } 
+                } 
+              } 
+            } 
+          },
+          "401": { description: "Não autorizado" },
+          "403": { description: "Acesso negado - apenas administradores" },
           "404": { description: "Evento não encontrado" }
         }
       }
     },
-    "/api/eventos/{id}/inscrever": {      post: {
+    "/api/eventos/{id}/inscrever": {
+      post: {
         summary: "Inscrever usuário no evento",
         tags: ["Eventos"],
         security: [{ bearerAuth: [] }],
@@ -1556,9 +1691,11 @@ module.exports = {
         responses: {
           "201": { description: "Inscrição realizada com sucesso" },
           "400": { description: "Erro ao inscrever ou já inscrito" },
+          "401": { description: "Não autorizado" },
           "404": { description: "Evento não encontrado" }
         }
-      },      delete: {
+      },
+      delete: {
         summary: "Cancelar inscrição do usuário no evento",
         tags: ["Eventos"],
         security: [{ bearerAuth: [] }],
@@ -1567,10 +1704,13 @@ module.exports = {
         ],
         responses: {
           "200": { description: "Inscrição cancelada com sucesso" },
+          "401": { description: "Não autorizado" },
           "404": { description: "Inscrição não encontrada ou evento não encontrado" }
         }
       }
-    },    "/api/eventos/minhas/inscricoes": {      get: {
+    },
+    "/api/eventos/minhas/inscricoes": {
+      get: {
         summary: "Listar eventos em que o usuário está inscrito",
         tags: ["Eventos"],
         security: [{ bearerAuth: [] }],
@@ -1582,11 +1722,13 @@ module.exports = {
                 schema: { type: "array", items: { $ref: "#/components/schemas/Evento" } }
               }
             }
-          }
+          },
+          "401": { description: "Não autorizado" }
         }
       }
     },
-    "/api/eventos/esporte/{esporteId}": {      get: {
+    "/api/eventos/esporte/{esporteId}": {
+      get: {
         summary: "Listar eventos por esporte",
         tags: ["Eventos"],
         parameters: [
@@ -1604,7 +1746,7 @@ module.exports = {
           "400": { description: "Erro ao buscar eventos" }
         }
       }
-    },
+    }
   },
   security: [
     { bearerAuth: [] }

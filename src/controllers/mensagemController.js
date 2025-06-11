@@ -7,31 +7,53 @@ async function verificarPermissao(req, esporteId) {
   // Garantir que o esporteId seja uma string
   const esporteIdStr = String(esporteId);
   
+  console.log('🔍 DEBUG verificarPermissao INÍCIO:');
+  console.log('- Usuario ID:', req.user.uid);
+  console.log('- Usuario role:', req.user.role);
+  console.log('- Esporte ID procurado:', esporteIdStr);
+  
   // Acesso livre ao grupo "Geral"
-  if (esporteIdStr === "0") return;
+  if (esporteIdStr === "0") {
+    console.log('✅ Acesso ao grupo Geral permitido');
+    return;
+  }
 
   // Admin tem acesso irrestrito
-  if (req.user.role === 'admin') return;
+  if (req.user.role === 'admin') {
+    console.log('✅ Acesso admin permitido');
+    return;
+  }
 
   try {
     // Verifica se o esporte existe
+    console.log('🔍 Verificando se esporte existe...');
     const esporte = await esporteService.buscarEsportePorId(esporteIdStr);
+    console.log('- Esporte encontrado:', esporte);
+    
     if (!esporte) {
+      console.log('❌ Esporte não encontrado no banco');
       throw new Error('Esporte não encontrado.');
     }
   } catch (error) {
+    console.log('❌ Erro ao buscar esporte:', error.message);
     throw new Error('Esporte não encontrado.');
   }
 
   // Verifica se o usuário tem inscrição aceita no esporte
+  console.log('🔍 Buscando inscrições do usuário...');
   const inscricoes = await inscricaoService.listarPorUsuario(req.user.uid);
+  console.log('- Todas as inscrições do usuário:', JSON.stringify(inscricoes, null, 2));
+  
   const inscricaoAceita = inscricoes.find(
     inscricao => inscricao.esporteId === esporteIdStr && inscricao.status === 'aceito'
   );
+  console.log('- Inscrição aceita encontrada:', inscricaoAceita);
 
   if (!inscricaoAceita) {
+    console.log('❌ Acesso negado para usuário:', req.user.uid, 'no esporte:', esporteIdStr);
     throw new Error('Acesso negado: você não está inscrito neste esporte.');
   }
+  console.log('✅ Acesso permitido para usuário:', req.user.uid, 'no esporte:', esporteIdStr);
 }
 
 module.exports = {

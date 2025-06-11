@@ -71,12 +71,14 @@ module.exports = {
       throw error;
     }
   },
-
   async listarPorUsuario(usuarioId) {
     try {
-      return await inscricaoRepository.findByUser(usuarioId);
+      console.log('🔍 InscricaoService.listarPorUsuario - Buscando para usuário:', usuarioId);
+      const inscricoes = await inscricaoRepository.findByUser(usuarioId);
+      console.log('🔍 InscricaoService.listarPorUsuario - Inscricoes encontradas:', inscricoes);
+      return inscricoes;
     } catch (error) {
-      console.error('Erro ao listar inscrições do usuário:', error);
+      console.error('❌ Erro ao listar inscrições do usuário:', error);
       throw new Error('Falha ao listar suas inscrições');
     }
   }
