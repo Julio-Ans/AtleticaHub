@@ -416,9 +416,9 @@ module.exports = {
     },
     
     // Esportes
-    "/api/esportes": {
-      get: {
+    "/api/esportes": {      get: {
         summary: "Listar todos os esportes",
+        tags: ["Esportes"],
         security: [{ bearerAuth: [] }],
         responses: {
           "200": {
@@ -436,6 +436,7 @@ module.exports = {
         }
       },      post: {
         summary: "Criar novo esporte",
+        tags: ["Esportes"],
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -475,6 +476,7 @@ module.exports = {
     // Produtos
     "/api/produtos": {      post: {
         summary: "Criar produto",
+        tags: ["Loja"],
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -511,9 +513,9 @@ module.exports = {
           "401": { description: "Não autorizado" },
           "403": { description: "Acesso negado - apenas administradores" }
         }
-      },
-      get: {
+      },      get: {
         summary: "Listar produtos",
+        tags: ["Loja"],
         responses: {
           "200": {
             description: "Lista de produtos",
@@ -529,9 +531,9 @@ module.exports = {
         }
       }
     },
-    "/api/esportes/{id}": {
-      put: {
+    "/api/esportes/{id}": {      put: {
         summary: "Atualizar esporte",
+        tags: ["Esportes"],
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -573,9 +575,9 @@ module.exports = {
           "403": { description: "Acesso negado - apenas administradores" },
           "404": { description: "Esporte não encontrado" }
         }
-      },
-      delete: {
+      },      delete: {
         summary: "Excluir esporte",
+        tags: ["Esportes"],
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -608,9 +610,9 @@ module.exports = {
     },
     
     // Inscrições
-    "/api/inscricoes/minhas": {
-      get: {
+    "/api/inscricoes/minhas": {      get: {
         summary: "Listar minhas inscrições",
+        tags: ["Esportes"],
         security: [{ bearerAuth: [] }],
         responses: {
           "200": {
@@ -628,9 +630,9 @@ module.exports = {
         }
       }
     },
-    "/api/inscricoes/{esporteId}": {
-      post: {
+    "/api/inscricoes/{esporteId}": {      post: {
         summary: "Criar inscrição em um esporte",
+        tags: ["Esportes"],
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -656,9 +658,9 @@ module.exports = {
         }
       }
     },
-    "/api/inscricoes/pendentes/{esporteId}": {
-      get: {
+    "/api/inscricoes/pendentes/{esporteId}": {      get: {
         summary: "Listar inscrições pendentes para um esporte (admin)",
+        tags: ["Esportes"],
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -687,9 +689,9 @@ module.exports = {
         }
       }
     },
-    "/api/inscricoes/{id}": {
-      put: {
+    "/api/inscricoes/{id}": {      put: {
         summary: "Atualizar status de inscrição (admin)",
+        tags: ["Esportes"],
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -735,9 +737,9 @@ module.exports = {
     },
     
     // Mensagens
-    "/api/mensagens/{esporteId}": {
-      get: {
+    "/api/mensagens/{esporteId}": {      get: {
         summary: "Listar mensagens de um esporte",
+        tags: ["Mensagens"],
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -764,9 +766,9 @@ module.exports = {
           "403": { description: "Acesso negado - usuário não inscrito neste esporte" },
           "404": { description: "Esporte não encontrado" }
         }
-      },
-      post: {
+      },      post: {
         summary: "Criar nova mensagem em um esporte",
+        tags: ["Mensagens"],
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -810,9 +812,9 @@ module.exports = {
     },
     
     // Cart e e-commerce
-    "/api/cart": {
-      post: {
+    "/api/cart": {      post: {
         summary: "Adicionar item ao carrinho",
+        tags: ["Loja"],
         requestBody: {
           required: true,
           content: {
@@ -832,9 +834,9 @@ module.exports = {
           },
           "400": { description: "Dados inválidos" }
         }
-      },
-      get: {
+      },      get: {
         summary: "Listar itens do carrinho",
+        tags: ["Loja"],
         parameters: [
           {
             name: "studentEmail",
@@ -860,9 +862,9 @@ module.exports = {
         }
       }
     },
-    "/api/cart/{id}": {
-      put: {
+    "/api/cart/{id}": {      put: {
         summary: "Atualizar item no carrinho",
+        tags: ["Loja"],
         parameters: [
           {
             name: "id",
@@ -898,9 +900,9 @@ module.exports = {
           "400": { description: "Dados inválidos" },
           "404": { description: "Item não encontrado" }
         }
-      },
-      delete: {
+      },      delete: {
         summary: "Remover item do carrinho",
+        tags: ["Loja"],
         parameters: [
           {
             name: "id",
@@ -928,9 +930,9 @@ module.exports = {
         }
       }
     },
-    "/api/checkout": {
-      post: {
+    "/api/checkout": {      post: {
         summary: "Finalizar compra",
+        tags: ["Loja"],
         requestBody: {
           required: true,
           content: {
@@ -957,9 +959,9 @@ module.exports = {
           "400": { description: "Dados inválidos ou carrinho vazio" }
         }
       }    },
-    "/api/produtos/{id}": {
-      get: {
+    "/api/produtos/{id}": {      get: {
         summary: "Detalhar produto por ID",
+        tags: ["Loja"],
         parameters: [
           {
             name: "id",
@@ -980,9 +982,9 @@ module.exports = {
           },
           "404": { description: "Produto não encontrado" }
         }
-      },
-      put: {
+      },      put: {
         summary: "Atualizar produto",
+        tags: ["Loja"],
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -1030,6 +1032,7 @@ module.exports = {
         }
       },      delete: {
         summary: "Excluir produto",
+        tags: ["Loja"],
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -1059,9 +1062,9 @@ module.exports = {
         }
       }
     },
-    "/api/mensagens/{id}": {
-      put: {
+    "/api/mensagens/{id}": {      put: {
         summary: "Editar mensagem",
+        tags: ["Mensagens"],
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -1099,9 +1102,9 @@ module.exports = {
           "403": { description: "Permissão negada - somente o autor pode editar" },
           "404": { description: "Mensagem não encontrada" }
         }
-      },
-      delete: {
+      },      delete: {
         summary: "Excluir mensagem",
+        tags: ["Mensagens"],
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -1132,9 +1135,9 @@ module.exports = {
         }
       }
     },
-    "/api/mensagens/{id}/fixar": {
-      patch: {
+    "/api/mensagens/{id}/fixar": {      patch: {
         summary: "Fixar/desfixar mensagem (admin)",
+        tags: ["Mensagens"],
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -1174,9 +1177,9 @@ module.exports = {
         }
       }
     },
-    "/api/pedidos": {
-      get: {
+    "/api/pedidos": {      get: {
         summary: "Listar pedidos",
+        tags: ["Loja"],
         parameters: [
           {
             name: "studentEmail",
@@ -1201,9 +1204,9 @@ module.exports = {
           "400": { description: "Parâmetro ausente" }
         }
       }
-    },    "/api/pedidos/{id}/payment": {
-      post: {
+    },    "/api/pedidos/{id}/payment": {      post: {
         summary: "Processar pagamento",
+        tags: ["Loja"],
         parameters: [
           {
             name: "id",
@@ -1232,9 +1235,9 @@ module.exports = {
         }
       }
     },
-    "/api/pedidos/{id}": {
-      get: {
+    "/api/pedidos/{id}": {      get: {
         summary: "Buscar pedido por ID",
+        tags: ["Loja"],
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -1264,9 +1267,9 @@ module.exports = {
         }
       }
     },
-    "/api/pedidos/admin/recentes": {
-      get: {
+    "/api/pedidos/admin/recentes": {      get: {
         summary: "Listar pedidos recentes (Admin)",
+        tags: ["Loja"],
         security: [{ bearerAuth: [] }],
         responses: {
           "200": {
@@ -1289,9 +1292,9 @@ module.exports = {
         }
       }
     },
-    "/api/pedidos/admin/estatisticas": {
-      get: {
+    "/api/pedidos/admin/estatisticas": {      get: {
         summary: "Obter estatísticas da loja (Admin)",
+        tags: ["Loja"],
         security: [{ bearerAuth: [] }],
         responses: {
           "200": {
@@ -1312,9 +1315,9 @@ module.exports = {
         }
       }
     },
-    "/api/pedidos/admin/relatorio-vendas": {
-      get: {
+    "/api/pedidos/admin/relatorio-vendas": {      get: {
         summary: "Relatório de vendas por produto (Admin)",
+        tags: ["Loja"],
         security: [{ bearerAuth: [] }],
         responses: {
           "200": {
@@ -1346,9 +1349,9 @@ module.exports = {
         }
       }
     },
-    "/api/pedidos/admin/{id}/status": {
-      patch: {
+    "/api/pedidos/admin/{id}/status": {      patch: {
         summary: "Atualizar status do pedido (Admin)",
+        tags: ["Loja"],
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -1392,9 +1395,9 @@ module.exports = {
         }
       }
     },
-    "/api/pedidos/admin/{id}": {
-      delete: {
+    "/api/pedidos/admin/{id}": {      delete: {
         summary: "Excluir pedido (Admin)",
+        tags: ["Loja"],
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -1425,9 +1428,9 @@ module.exports = {
       }
     },
     // Eventos
-    "/api/eventos": {
-      get: {
+    "/api/eventos": {      get: {
         summary: "Listar todos os eventos",
+        tags: ["Eventos"],
         responses: {
           "200": {
             description: "Lista de eventos",
@@ -1440,6 +1443,7 @@ module.exports = {
         }
       },      post: {
         summary: "Criar evento (admin)",
+        tags: ["Eventos"],
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -1478,9 +1482,9 @@ module.exports = {
         }
       }
     },
-    "/api/eventos/permitidos": {
-      get: {
+    "/api/eventos/permitidos": {      get: {
         summary: "Listar eventos permitidos para o usuário",
+        tags: ["Eventos"],
         security: [{ bearerAuth: [] }],
         description: "Lista eventos baseados nas inscrições em esportes do usuário",
         responses: {
@@ -1500,9 +1504,9 @@ module.exports = {
         }
       }
     },
-    "/api/eventos/{id}": {
-      get: {
+    "/api/eventos/{id}": {      get: {
         summary: "Buscar evento por ID",
+        tags: ["Eventos"],
         parameters: [
           { name: "id", in: "path", required: true, schema: { type: "string" } }
         ],
@@ -1517,9 +1521,9 @@ module.exports = {
           },
           "404": { description: "Evento não encontrado" }
         }
-      },
-      put: {
+      },      put: {
         summary: "Editar evento (admin)",
+        tags: ["Eventos"],
         security: [{ bearerAuth: [] }],
         parameters: [
           { name: "id", in: "path", required: true, schema: { type: "string" } }
@@ -1546,9 +1550,9 @@ module.exports = {
           "400": { description: "Erro ao editar evento" },
           "404": { description: "Evento não encontrado" }
         }
-      },
-      delete: {
+      },      delete: {
         summary: "Excluir evento (admin)",
+        tags: ["Eventos"],
         security: [{ bearerAuth: [] }],
         parameters: [
           { name: "id", in: "path", required: true, schema: { type: "string" } }
@@ -1559,9 +1563,9 @@ module.exports = {
         }
       }
     },
-    "/api/eventos/{id}/inscrever": {
-      post: {
+    "/api/eventos/{id}/inscrever": {      post: {
         summary: "Inscrever usuário no evento",
+        tags: ["Eventos"],
         security: [{ bearerAuth: [] }],
         parameters: [
           { name: "id", in: "path", required: true, schema: { type: "string" } }
@@ -1571,9 +1575,9 @@ module.exports = {
           "400": { description: "Erro ao inscrever ou já inscrito" },
           "404": { description: "Evento não encontrado" }
         }
-      },
-      delete: {
+      },      delete: {
         summary: "Cancelar inscrição do usuário no evento",
+        tags: ["Eventos"],
         security: [{ bearerAuth: [] }],
         parameters: [
           { name: "id", in: "path", required: true, schema: { type: "string" } }
@@ -1583,9 +1587,9 @@ module.exports = {
           "404": { description: "Inscrição não encontrada ou evento não encontrado" }
         }
       }
-    },    "/api/eventos/minhas/inscricoes": {
-      get: {
+    },    "/api/eventos/minhas/inscricoes": {      get: {
         summary: "Listar eventos em que o usuário está inscrito",
+        tags: ["Eventos"],
         security: [{ bearerAuth: [] }],
         responses: {
           "200": {
@@ -1599,9 +1603,9 @@ module.exports = {
         }
       }
     },
-    "/api/eventos/esporte/{esporteId}": {
-      get: {
+    "/api/eventos/esporte/{esporteId}": {      get: {
         summary: "Listar eventos por esporte",
+        tags: ["Eventos"],
         parameters: [
           { name: "esporteId", in: "path", required: true, schema: { type: "string" }, description: "ID do esporte" }
         ],
