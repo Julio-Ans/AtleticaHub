@@ -8,7 +8,7 @@ const AuthController = require('../controllers/authController');
 router.post('/register', AuthController.register); // API externa (Next.js)
 router.post('/login', AuthController.login);
 router.post('/verify', AuthController.verify);
-router.post('/profile', AuthController.profile);
+router.get('/profile', AuthController.profile);
 router.put('/update-profile', AuthController.updateProfile);
 router.post('/logout', AuthController.logout);
 
