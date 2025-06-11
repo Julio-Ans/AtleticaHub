@@ -6,8 +6,8 @@ const AuthController = require('../controllers/authController');
 
 // --- Rotas públicas de autenticação ---
 router.post('/register', AuthController.register); // API externa (Next.js)
-router.post('/login', AuthController.login); // Login deve ser público
-router.post('/verify', AuthController.verify); // Verify pode ser público também
+router.post('/login', verificarToken, AuthController.login);
+router.post('/verify', verificarToken, AuthController.verify);
 
 // --- Rotas protegidas (requerem autenticação via header) ---
 router.get('/profile', verificarToken, AuthController.profile);

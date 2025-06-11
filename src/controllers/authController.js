@@ -122,7 +122,7 @@ class AuthController {
           // Criar usuário no banco com dados mínimos
           usuario = await userRepository.create({
             id: uid,
-            nome: firebaseUser.displayName || firebaseUser.email || 'Usuário',
+            nome: firebaseUser.displayName || firebaseUser.email || email || 'Usuário',
             dataNascimento: new Date('1990-01-01'), // Data padrão
             telefone: firebaseUser.phoneNumber || 'Não informado',
             curso: 'Não informado',
@@ -148,6 +148,16 @@ class AuthController {
       });
     } catch (error) {
       console.error('❌ Erro no login:', error);
+      
+      // Se req.user é undefined, significa que o middleware não funcionou
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          error: 'Token de autenticação inválido ou ausente',
+          code: 'MISSING_OR_INVALID_TOKEN'
+        });
+      }
+      
       return AuthController.handleError(res, error);
     }
   }
