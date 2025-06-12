@@ -14,6 +14,7 @@ router.use(verificarToken);
 
 // Rotas de esportes - note que os caminhos são relativos a /api/esportes
 router.get('/', esporteController.listarEsportes);
+router.get('/:id', esporteController.buscarEsportePorId);
 router.post('/', checkRole('admin'), upload.single('foto'), esporteController.criarEsporte);
 router.put('/:id', checkRole('admin'), upload.single('foto'), esporteController.atualizarEsporte);
 router.delete('/:id', checkRole('admin'), esporteController.excluirEsporte);
