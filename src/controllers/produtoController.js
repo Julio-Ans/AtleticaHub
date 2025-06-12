@@ -2,6 +2,8 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { bucket } = require('../config/firebaseAdmin');
 const uploadService = require('../services/uploadService');
+const produtoService = require('../services/produtoService'); // Seu serviço para acessar dados de produtos no DB
+const recomendacaoService = require('../services/recomendacaoService');
 
 const criarProduto = async (req, res) => {
   try {
@@ -178,10 +180,101 @@ const deletarProduto = async (req, res) => {
   }
 };
 
+async function getProdutoDetalhesComRecomendacoes(req, res) {
+  const { id } = req.params; // ID do produto que o usuário está vendo
+  const quantidadeRecomendacoes = parseInt(req.query.quantidade || '3');
+
+  try {
+    const produto = await produtoService.detalharProduto(id);
+    if (!produto) {
+      return res.status(404).json({ message: 'Produto não encontrado.' });
+    }
+
+    const interacoesDosClientesComProdutos = await produtoService.getInteracoesParaRecomendador();
+
+    if (!interacoesDosClientesComProdutos || interacoesDosClientesComProdutos.length === 0) {
+        return res.status(200).json({
+            produto: produto,
+            recomendados: [],
+            message: "Não há dados de interação suficientes para gerar recomendações."
+        });
+    }
+
+    const nomesDosRecomendados = await recomendacaoService.getRecommendations(
+      interacoesDosClientesComProdutos,
+      produto.nome,
+      quantidadeRecomendacoes
+    );
+
+    let produtosRecomendadosCompletos = [];
+    if (nomesDosRecomendados && nomesDosRecomendados.length > 0) {
+      // Buscar os detalhes completos dos produtos recomendados
+      produtosRecomendadosCompletos = await prisma.produto.findMany({
+        where: {
+          nome: {
+            in: nomesDosRecomendados
+          }
+        }
+      });
+      // Opcional: Manter a ordem original dos recomendados, se necessário
+      // Isto pode ser importante se a ordem da ML service for relevante
+      produtosRecomendadosCompletos.sort((a, b) => {
+        return nomesDosRecomendados.indexOf(a.nome) - nomesDosRecomendados.indexOf(b.nome);
+      });
+    }
+
+    return res.status(200).json({
+      produto: produto,
+      recomendados: produtosRecomendadosCompletos, // Agora envia os objetos completos
+    });
+
+  } catch (error) {
+    console.error('Erro ao obter detalhes do produto e recomendações:', error);
+    return res.status(500).json({ message: 'Erro interno do servidor ao processar sua requisição.' });
+  }
+}
+
+// Nova função para o controller
+const atualizarImagensProdutosAleatoriamente = async (req, res) => {
+  try {
+    // Chamar o serviço para atualizar as imagens
+    const resultado = await produtoService.atualizarTodasAsImagensDeProdutosAleatoriamente();
+    
+    // Verificar se houve erros no processo do serviço
+    if (resultado.erros > 0 && resultado.atualizados === 0) {
+      // Se apenas erros ocorreram, pode ser um erro 500 ou 404 dependendo da natureza
+      // Se nenhum produto foi encontrado, o serviço já retorna uma mensagem específica.
+      return res.status(500).json({ 
+        message: resultado.mensagem || 'Falha ao atualizar imagens dos produtos.',
+        detalhes: resultado
+      });
+    }
+
+    if (resultado.atualizados === 0 && resultado.erros === 0 && resultado.mensagem.includes('Nenhum produto')){
+        return res.status(404).json({message: resultado.mensagem, detalhes: resultado });
+    }
+
+    // Se chegou aqui, pelo menos algumas atualizações podem ter ocorrido
+    res.status(200).json({
+      message: resultado.mensagem || 'Processo de atualização de imagens concluído.',
+      detalhes: resultado
+    });
+
+  } catch (error) {
+    console.error('Erro no controller ao tentar atualizar imagens dos produtos:', error);
+    res.status(500).json({ 
+      message: 'Erro interno do servidor ao tentar atualizar imagens dos produtos.',
+      error: error.message 
+    });
+  }
+};
+
 module.exports = {
   criarProduto,
   listarProdutos,
   detalharProduto,
   editarProduto,
-  deletarProduto
+  deletarProduto,
+  getProdutoDetalhesComRecomendacoes,
+  atualizarImagensProdutosAleatoriamente // Adicionar a nova função aqui
 };

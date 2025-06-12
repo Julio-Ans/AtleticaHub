@@ -19,6 +19,7 @@ router.get('/', produtoController.listarProdutos);
 
 // Detalhar um produto (público)
 router.get('/:id', produtoController.detalharProduto);
+router.get('/:id/recomendar', produtoController.getProdutoDetalhesComRecomendacoes); // Nova rota para recomendar produtos
 
 // Editar produto (admin)
 router.put(
@@ -35,6 +36,14 @@ router.delete(
   verificarToken,
   checkRole('admin'),
   produtoController.deletarProduto
+);
+
+// Rota para atualizar todas as imagens dos produtos aleatoriamente (admin apenas)
+router.post(
+  '/admin/atualizar-imagens-aleatorias',
+  verificarToken,
+  checkRole('admin'),
+  produtoController.atualizarImagensProdutosAleatoriamente
 );
 
 module.exports = router;

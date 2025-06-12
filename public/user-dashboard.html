@@ -667,6 +667,17 @@
       font-weight: bold;
     }
     
+    /* Recomendações */
+    #product-recommendations {
+      margin-top: 40px;
+    }
+    
+    #recommendations-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    
     /* Responsividade */
     @media (max-width: 768px) {
       .tabs {
@@ -807,6 +818,15 @@
         <div id="perfilDetalhes">Carregando informações do perfil...</div>
         <button class="primary" onclick="logout()" style="margin-top: 20px;">Sair</button>
       </div>    </div>
+
+    <!-- Seção de Recomendações de Produtos -->
+    <div id="product-recommendations" class="mt-5">
+      <h3>Produtos Recomendados para Você</h3>
+      <div id="recommendations-list" class="row">
+        <!-- As recomendações serão inseridas aqui pelo JavaScript -->
+      </div>
+      <p id="recommendations-message" class="mt-2"></p>
+    </div>
   </div>
 
   <script>
@@ -821,43 +841,142 @@
     let produtosDisponiveis = [];
     let carrinho = [];
     
+    // Definição da função de recomendações movida para o escopo global do script
+    async function fetchAndDisplayRecommendations() {
+        const recommendationsList = document.getElementById('recommendations-list');
+        const recommendationsMessage = document.getElementById('recommendations-message');
+
+        if (!recommendationsList || !recommendationsMessage) {
+            console.warn('Elementos HTML para recomendações não encontrados. As recomendações não serão exibidas.');
+            return;
+        }
+
+        recommendationsList.innerHTML = ''; // Limpa recomendações anteriores
+        recommendationsMessage.textContent = 'Carregando recomendações...';
+
+        if (!firebase.auth().currentUser) {
+            recommendationsMessage.textContent = 'Você precisa estar logado para ver as recomendações.';
+            console.log('Usuário não autenticado. Recomendações não serão carregadas.');
+            return;
+        }
+
+        try {
+            const token = await firebase.auth().currentUser.getIdToken();
+
+            // 1. Buscar um produto base para as recomendações.
+            // Usando o primeiro produto da lista geral como exemplo.
+            // A rota /api/produtos é pública, não precisa de token aqui.
+            const productsResponse = await fetch('/api/produtos');
+            if (!productsResponse.ok) {
+                throw new Error('Falha ao buscar produtos para base de recomendação.');
+            }
+            const productsData = await productsResponse.json();
+            
+            // productsData pode ser um objeto { produtos: [] } ou diretamente um array []
+            const productList = Array.isArray(productsData) ? productsData : productsData.produtos;
+
+            if (!productList || productList.length === 0) {
+                recommendationsMessage.textContent = 'Nenhum produto disponível para gerar recomendações no momento.';
+                return;
+            }
+            
+            const baseProduct = productList[0]; // Usando o primeiro produto como base
+
+            // 2. Buscar recomendações para este produto base
+            // A rota /api/produtos/:id/recomendar precisa do token
+            const recommendationsResponse = await fetch(`/api/produtos/${baseProduct.id}/recomendar?quantidade=4`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (!recommendationsResponse.ok) {
+                const errorData = await recommendationsResponse.json();
+                throw new Error(errorData.message || 'Falha ao buscar recomendações.');
+            }
+            
+            const recommendationsData = await recommendationsResponse.json();
+
+            if (recommendationsData.recomendados && recommendationsData.recomendados.length > 0) {
+                recommendationsList.innerHTML = ''; // Limpa mensagem de "carregando"
+                recommendationsData.recomendados.forEach(produto => {
+                    const card = document.createElement('div');
+                    card.className = 'produto-card'; // Reutilizando a classe de card de produto
+                    card.innerHTML = `
+                      <img src="${produto.imagemUrl || './placeholder.png'}" alt="${produto.nome}" class="produto-imagem">
+                      <div class="produto-info">
+                        <h4>${produto.nome}</h4>
+                        <p class="produto_preco">R$ ${parseFloat(produto.preco).toFixed(2)}</p>
+                        <p class="produto-estoque">Estoque: ${produto.estoque}</p>
+                        <button onclick="changeTab('loja')">Ver na Loja</button>
+                      </div>
+                    `;
+                    recommendationsList.appendChild(card);
+                });
+                recommendationsMessage.textContent = ''; // Limpa mensagem se houver recomendações
+            } else if (recommendationsData.message) {
+                recommendationsMessage.textContent = recommendationsData.message;
+            } else {
+                recommendationsMessage.textContent = 'Nenhuma recomendação encontrada para este produto.';
+            }
+
+        } catch (error) {
+            console.error('Erro ao carregar recomendações:', error);
+            recommendationsMessage.textContent = `Erro ao carregar recomendações: ${error.message}`;
+        }
+    }
+
+
     // Inicialização
     async function main() {
       try {
-        // Carregar configuração do Firebase
-        const resp = await fetch('/config/firebase');
-        const firebaseConfig = await resp.json();
-        
-        // Inicializar Firebase
-        firebase.initializeApp(firebaseConfig);
-        
-        // Verificar autenticação
-        firebase.auth().onAuthStateChanged(async user => {
-          if (!user) {
-            console.warn('Usuário não autenticado');
-            return window.location.href = '/login';
+        const firebaseConfigResponse = await fetch('/config/firebase');
+        if (!firebaseConfigResponse.ok) {
+          throw new Error("Falha ao carregar configuração do Firebase.");
+        }
+        const firebaseConfig = await firebaseConfigResponse.json();
+        if (!firebase.apps.length) {
+          firebase.initializeApp(firebaseConfig);
+        }
+
+        firebase.auth().onAuthStateChanged(async (user) => {
+          if (user) {
+            firebaseUser = user;
+            exibirInfoUsuario();
+            await verificarAcesso();
+
+            // Carregar esportes primeiro, pois outras funções podem depender disso
+            await carregarEsportes(); 
+            await carregarMinhasInscricoes(); // Carregar inscrições após esportes
+
+            // Carregar dados iniciais com base na aba atual ou padrão
+            if (currentTab === 'mensagens' && document.getElementById('esporteMensagens')) {
+                await carregarMensagens(document.getElementById('esporteMensagens').value);
+            } else if (currentTab === 'loja') {
+                await carregarProdutos();
+                await carregarCarrinhoBackend();
+                carregarMeusPedidosLoja();
+            } else if (currentTab === 'eventos') {
+                await carregarEventosUsuario(); // Esportes já devem estar carregados
+            } else if (currentTab === 'esportes') {
+                // Esportes e inscrições já foram carregados acima
+            }
+            
+            await fetchAndDisplayRecommendations();
+
+          } else {
+            firebaseUser = null;
+            console.log("Nenhum usuário logado, redirecionando para login.");
+            if (window.location.pathname !== '/login.html' && window.location.pathname !== '/login') {
+                window.location.href = '/login.html';
+            }
           }
-          
-          firebaseUser = user;
-          await verificarAcesso();
-          
-          // Carregar dados iniciais
-          await Promise.all([
-            carregarEsportes(),
-            carregarMinhasInscricoes(),
-            carregarMensagens(esporteGeralId),
-            carregarEventosUsuario()
-          ]);
-          
-          // Exibir informações do usuário
-          exibirInfoUsuario();
         });
-      } catch (err) {
-        console.error('Erro ao inicializar:', err);
-        showAlert('esportesAlert', 'Erro ao carregar a página. Por favor, tente novamente.', 'danger');
+      } catch (error) {
+        console.error("Erro crítico na inicialização (main):", error);
+        document.body.innerHTML = "<p style='color:red;text-align:center;margin-top:20px;'>Erro ao carregar o painel. Verifique o console para detalhes.</p>";
       }
     }
-    
+    main();
+
     // Verificar acesso do usuário
     async function verificarAcesso() {
       try {
@@ -898,7 +1017,7 @@
     }
     
     // Mudar entre abas
-    function changeTab(tab) {
+    async function changeTab(tab) { // Adicionado async
       // Remover classe ativa de todas as abas
       document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -909,18 +1028,21 @@
       
       // Esconder/mostrar eventosTab
       document.getElementById('eventosTab').style.display = tab === 'eventos' ? 'block' : 'none';
-        // Se for a aba da loja, carregar produtos, carrinho e pedidos quando autenticado
+      
+      currentTab = tab; // Atualizar currentTab globalmente
+
+      // Carregar dados específicos da aba
       if (tab === 'loja') {
         if (firebaseUser) {
-          carregarProdutos();
-          carregarCarrinhoBackend();
+          await carregarProdutos();
+          await carregarCarrinhoBackend();
           carregarMeusPedidosLoja();
         } else {
           // Aguardar autenticação antes de carregar
-          const checkAuth = () => {
+          const checkAuth = async () => { // Adicionado async
             if (firebaseUser) {
-              carregarProdutos();
-              carregarCarrinhoBackend();
+              await carregarProdutos();
+              await carregarCarrinhoBackend();
               carregarMeusPedidosLoja();
             } else {
               setTimeout(checkAuth, 100);
@@ -928,9 +1050,33 @@
           };
           checkAuth();
         }
+      } else if (tab === 'esportes') {
+        if (firebaseUser) {
+          // carregarEsportes() já deve ter sido chamado em main() ou ao mudar para esta aba
+          // Se esportes não estiverem carregados ou precisar recarregar:
+          if (esportes.length === 0) { // Opcional: recarregar se necessário
+            await carregarEsportes();
+          }
+          await carregarMinhasInscricoes();
+        }
+      } else if (tab === 'eventos') {
+        if (firebaseUser) {
+          // carregarEsportes() já deve ter sido chamado em main()
+          // Se esportes não estiverem carregados:
+           if (esportes.length === 0) { // Garante que esportes foram carregados
+            await carregarEsportes();
+          }
+          await carregarEventosUsuario();
+        }
+      } else if (tab === 'mensagens') {
+        if (firebaseUser && document.getElementById('esporteMensagens')) {
+            // Garante que esportes (para o seletor) foram carregados
+            if (esportes.length === 0 && document.getElementById('esporteMensagens').options.length <= 1) { 
+                await carregarEsportes(); // Carrega esportes se o seletor não estiver populado
+            }
+            await carregarMensagens(document.getElementById('esporteMensagens').value);
+        }
       }
-      
-      currentTab = tab;
     }
     
     // Carregar esportes disponíveis
@@ -1211,6 +1357,7 @@
                     ${inscrito ? '❌ Cancelar inscrição' : '✅ Inscrever-se'}
                   </button>
                   ${inscrito ? '<span class="inscrito-badge">Inscrito</span>' : ''}
+
                 </div>
               `;
               eventosLista.appendChild(div);
@@ -1633,9 +1780,6 @@
         alert('Erro ao fazer logout. Por favor, tente novamente.');
       }
     }
-
-    // Iniciar a aplicação
-    main();
   </script>
 </body>
 </html>
