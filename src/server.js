@@ -97,9 +97,11 @@ app.use('/api/produtos', produtoRoutes);
 // 🛍 Carrinho
 const cartRoutes = require('./routes/cartRoutes');
 app.use('/api/cart', cartRoutes);
+app.use('/api/checkout',cartRoutes)
 
 // Pedidos
 const pedidosRoutes = require('./routes/pedidosRoutes'); // ajuste o caminho se for diferente
+const { checkout } = require('./controllers/cartController');
 app.use('/api/pedidos', pedidosRoutes);
 
 
