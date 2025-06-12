@@ -104,7 +104,7 @@ async function atualizarStatusPedido(req, res) {
 
     if (!id || isNaN(id)) {
       return res.status(400).json({ error: "ID inválido" });
-    }    if (!["pendente", "processando", "entregue", "cancelado"].includes(status)) {
+    }    if (!["pendente", "processando", "pago", "enviado", "entregue", "cancelado"].includes(status)) { // Removido "pagamento_falhou"
       return res.status(400).json({ error: "Status inválido" });
     }
 

@@ -151,12 +151,13 @@ async function obterEstatisticasLoja() {
     // Contar total de pedidos
     const totalPedidos = await prisma.pedido.count();
     
-    // Calcular vendas do mês atual
+    // Calcular vendas do mês atual (considerar apenas pedidos pagos ou entregues)
     const vendasMes = await prisma.pedido.aggregate({
       where: {
         createdAt: {
           gte: inicioMes
-        }
+        },
+        status: { in: ['pago', 'entregue'] } // Ajustado para refletir status de pagamento bem-sucedido
       },
       _sum: {
         total: true
